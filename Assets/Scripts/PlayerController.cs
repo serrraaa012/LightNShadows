@@ -194,6 +194,11 @@ namespace LightNShadows
                 CameraShake.Instance.Shake(0.4f, 0.45f);
             }
 
+            if (PostProcessEffects.Instance != null)
+            {
+                PostProcessEffects.Instance.PulseChromaticAberration(0.75f, 0.35f);
+            }
+
             gameObject.SetActive(false);
 
             if (GameManager.Instance != null)

@@ -1,6 +1,8 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using System.IO;
 
 namespace LightNShadows.Editor
@@ -14,7 +16,7 @@ namespace LightNShadows.Editor
             Sprite squareSprite = GetOrCreateSolidSquareSprite();
             Sprite circleSprite = GetOrCreateSolidCircleSprite();
 
-            // 2. Setup Camera
+            // 2. Setup Camera & URP Post-Processing
             Camera cam = Camera.main;
             if (cam == null)
             {
@@ -29,12 +31,22 @@ namespace LightNShadows.Editor
             cam.backgroundColor = new Color(0.93f, 0.93f, 0.96f);
             cam.transform.position = new Vector3(0f, 0f, -10f);
 
+            // Enable Post Processing on Camera
+            UniversalAdditionalCameraData camData = cam.GetUniversalAdditionalCameraData();
+            if (camData != null)
+            {
+                camData.renderPostProcessing = true;
+            }
+
             if (cam.GetComponent<CameraShake>() == null)
             {
                 cam.gameObject.AddComponent<CameraShake>();
             }
 
-            // 3. Setup Managers
+            // 3. Setup Global Volume (Bloom, Vignette, Chromatic Aberration)
+            SetupGlobalPostProcessing();
+
+            // 4. Setup Managers
             GameObject dimensionMgrObj = GameObject.Find("DimensionManager");
             if (dimensionMgrObj == null)
             {
@@ -66,7 +78,7 @@ namespace LightNShadows.Editor
                 bgSo.ApplyModifiedProperties();
             }
 
-            // 4. Setup Ground (Thick platform baseline)
+            // 5. Setup Ground (Thick platform baseline)
             GameObject groundObj = GameObject.Find("Ground");
             if (groundObj == null)
             {
@@ -78,10 +90,10 @@ namespace LightNShadows.Editor
             SpriteRenderer groundSr = groundObj.GetComponent<SpriteRenderer>();
             if (groundSr == null) groundSr = groundObj.AddComponent<SpriteRenderer>();
             groundSr.sprite = squareSprite;
-            groundSr.color = new Color(0.25f, 0.26f, 0.32f);
+            groundSr.color = new Color(0.22f, 0.23f, 0.28f);
             groundSr.sortingOrder = 1;
 
-            // 5. Setup Obstacle Prefab
+            // 6. Setup Obstacle Prefab
             string prefabsDir = "Assets/Prefabs";
             if (!Directory.Exists(prefabsDir))
             {
@@ -106,7 +118,7 @@ namespace LightNShadows.Editor
             GameObject obstaclePrefab = PrefabUtility.SaveAsPrefabAsset(tempObstacle, prefabPath);
             GameObject.DestroyImmediate(tempObstacle);
 
-            // 6. Setup Spawner
+            // 7. Setup Spawner
             GameObject spawnerObj = GameObject.Find("ObstacleSpawner");
             if (spawnerObj == null)
             {
@@ -123,7 +135,7 @@ namespace LightNShadows.Editor
             spawnerSo.FindProperty("floatingY").floatValue = 0.5f;
             spawnerSo.ApplyModifiedProperties();
 
-            // 7. Setup Player (Properly scaled, perfectly grounded)
+            // 8. Setup Player
             GameObject playerObj = GameObject.Find("Player");
             if (playerObj == null)
             {
@@ -131,9 +143,8 @@ namespace LightNShadows.Editor
             }
             playerObj.SetActive(true);
             playerObj.transform.position = new Vector3(-5f, -2.4f, 0f);
-            playerObj.transform.localScale = new Vector3(0.75f, 0.75f, 1f); // Sleek arcade ball size
+            playerObj.transform.localScale = new Vector3(0.75f, 0.75f, 1f);
 
-            // Clean up any old physics components that cause falling
             Rigidbody2D oldRb = playerObj.GetComponent<Rigidbody2D>();
             if (oldRb != null)
             {
@@ -153,12 +164,11 @@ namespace LightNShadows.Editor
             CircleCollider2D playerCol = playerObj.GetComponent<CircleCollider2D>();
             if (playerCol == null) playerCol = playerObj.AddComponent<CircleCollider2D>();
             playerCol.radius = 0.5f;
-            playerCol.isTrigger = true; // Trigger-based collision for flawless phasing and hit detection
+            playerCol.isTrigger = true;
 
             PlayerController pc = playerObj.GetComponent<PlayerController>();
             if (pc == null) pc = playerObj.AddComponent<PlayerController>();
 
-            // Setup TrailRenderer for juicy movement trail
             TrailRenderer trail = playerObj.GetComponent<TrailRenderer>();
             if (trail == null) trail = playerObj.AddComponent<TrailRenderer>();
             trail.time = 0.22f;
@@ -173,10 +183,81 @@ namespace LightNShadows.Editor
             pcSo.FindProperty("groundY").floatValue = -2.4f;
             pcSo.FindProperty("jumpForce").floatValue = 13f;
             pcSo.FindProperty("gravity").floatValue = 35f;
+            // High dynamic range luminous glow in shadow realm
+            pcSo.FindProperty("shadowDimensionColor").colorValue = new Color(1.35f, 1.35f, 1.45f, 1f);
+            pcSo.FindProperty("lightDimensionColor").colorValue = new Color(0.06f, 0.06f, 0.09f, 1f);
             pcSo.ApplyModifiedProperties();
 
-            Debug.Log("<color=green>[LightNShadows]</color> Setup calibrated: Compact ball size + Kinematic locked ground physics!");
-            EditorUtility.DisplayDialog("LightNShadows", "Setup updated!\n\n1. Ball size is now sleek and compact (0.75x).\n2. Ball is locked to the floor—it will NEVER fall through.\n3. Jump (W / Up Arrow) and Swap (Spacebar / Click) are ready.\n\nPress PLAY to test!", "Let's Go!");
+            Debug.Log("<color=green>[LightNShadows]</color> Complete Scene + URP Bloom Glow configured!");
+            EditorUtility.DisplayDialog("LightNShadows", "Cinematic URP Bloom & Post-Processing Configured!\n\n- Bloom glow enabled for luminous elements\n- Chromatic Aberration pulse on realm shift & death\n- Subtle cinematic vignette applied\n\nPress PLAY to see the glow!", "Awesome!");
+        }
+
+        private static void SetupGlobalPostProcessing()
+        {
+            GameObject volumeObj = GameObject.Find("Global Volume");
+            if (volumeObj == null)
+            {
+                volumeObj = new GameObject("Global Volume");
+            }
+
+            Volume volume = volumeObj.GetComponent<Volume>();
+            if (volume == null) volume = volumeObj.AddComponent<Volume>();
+            volume.isGlobal = true;
+
+            // Ensure profile exists
+            string settingsDir = "Assets/Settings";
+            if (!Directory.Exists(settingsDir))
+            {
+                Directory.CreateDirectory(settingsDir);
+                AssetDatabase.Refresh();
+            }
+
+            string profilePath = "Assets/Settings/LightNShadows_PostProcessProfile.asset";
+            VolumeProfile profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(profilePath);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                AssetDatabase.CreateAsset(profile, profilePath);
+                AssetDatabase.SaveAssets();
+            }
+
+            volume.profile = profile;
+
+            // 1. Bloom
+            Bloom bloom;
+            if (!profile.TryGet(out bloom))
+            {
+                bloom = profile.Add<Bloom>(true);
+            }
+            bloom.intensity.Override(1.35f);
+            bloom.threshold.Override(0.85f);
+            bloom.scatter.Override(0.68f);
+
+            // 2. Chromatic Aberration
+            ChromaticAberration ca;
+            if (!profile.TryGet(out ca))
+            {
+                ca = profile.Add<ChromaticAberration>(true);
+            }
+            ca.intensity.Override(0.06f);
+
+            // 3. Vignette
+            Vignette vig;
+            if (!profile.TryGet(out vig))
+            {
+                vig = profile.Add<Vignette>(true);
+            }
+            vig.intensity.Override(0.24f);
+            vig.smoothness.Override(0.42f);
+
+            // Hook up PostProcessEffects script
+            if (volumeObj.GetComponent<PostProcessEffects>() == null)
+            {
+                volumeObj.AddComponent<PostProcessEffects>();
+            }
+
+            EditorUtility.SetDirty(profile);
+            AssetDatabase.SaveAssets();
         }
 
         private static Sprite GetOrCreateSolidSquareSprite()
