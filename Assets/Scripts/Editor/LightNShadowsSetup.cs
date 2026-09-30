@@ -64,6 +64,7 @@ namespace LightNShadows.Editor
             GameObject gameMgrObj = GameObject.Find("GameManager");
             if (gameMgrObj == null) gameMgrObj = new GameObject("GameManager");
             if (gameMgrObj.GetComponent<GameManager>() == null) gameMgrObj.AddComponent<GameManager>();
+            if (gameMgrObj.GetComponent<UIManager>() == null) gameMgrObj.AddComponent<UIManager>();
 
             GameObject soundMgrObj = GameObject.Find("SoundManager");
             if (soundMgrObj == null) soundMgrObj = new GameObject("SoundManager");

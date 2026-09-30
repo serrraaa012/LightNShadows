@@ -25,10 +25,18 @@ namespace LightNShadows.Editor
             GenerateCyberTrack();
             GenerateMonolith();
 
+            // UI Sprites
+            GenerateUIPanel();
+            GenerateUIButton(false);
+            GenerateUIButton(true);
+            GenerateIconJump();
+            GenerateIconPhase();
+
             AssetDatabase.Refresh();
         }
 
-        // 1. Sharp Crystal Spike (Ground hazard)
+        // --- GAMEPLAY SPRITES ---
+
         private static void GenerateCrystalSpike()
         {
             string path = $"{SpritesDir}/CrystalSpike.png";
@@ -41,12 +49,9 @@ namespace LightNShadows.Editor
             Vector2 baseR = new Vector2(w * 0.85f, h * 0.05f);
             Vector2 facetMid = new Vector2(w * 0.5f, h * 0.05f);
 
-            // Left facet
             DrawTriangle(tex, tip, baseL, facetMid, new Color(0.85f, 0.85f, 0.9f, 1f));
-            // Right facet (slightly shaded for 3D crystal depth)
             DrawTriangle(tex, tip, facetMid, baseR, new Color(1f, 1f, 1f, 1f));
 
-            // Sharp edge line
             DrawLine(tex, tip, baseL, Color.white, 3);
             DrawLine(tex, tip, baseR, Color.white, 3);
             DrawLine(tex, tip, facetMid, new Color(0.7f, 0.7f, 0.8f, 0.9f), 2);
@@ -54,7 +59,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 2. High-Tech Laser Energy Gate (Tall barrier)
         private static void GenerateLaserGate()
         {
             string path = $"{SpritesDir}/LaserGate.png";
@@ -62,15 +66,12 @@ namespace LightNShadows.Editor
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             ClearTexture(tex);
 
-            // Top and bottom emitter caps
             FillRect(tex, 14, h - 40, w - 28, 30, Color.white);
             FillRect(tex, 14, 10, w - 28, 30, Color.white);
 
-            // Outer emitter antennas
             FillRect(tex, 24, h - 55, w - 48, 15, new Color(0.8f, 0.8f, 0.85f));
             FillRect(tex, 24, 40, w - 48, 15, new Color(0.8f, 0.8f, 0.85f));
 
-            // Vertical electric laser beam in center
             int beamCenter = w / 2;
             int beamHalfWidth = 14;
             for (int y = 55; y < h - 55; y++)
@@ -86,7 +87,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 3. Floating Diamond Drone (Mid-air hazard)
         private static void GenerateFloatingDiamond()
         {
             string path = $"{SpritesDir}/FloatingDiamond.png";
@@ -99,11 +99,9 @@ namespace LightNShadows.Editor
             Vector2 left = new Vector2(size * 0.08f, size * 0.5f);
             Vector2 right = new Vector2(size * 0.92f, size * 0.5f);
 
-            // Outer diamond
             DrawTriangle(tex, top, left, bot, new Color(0.85f, 0.85f, 0.9f));
             DrawTriangle(tex, top, bot, right, Color.white);
 
-            // Inner eye / core
             Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
             FillCircle(tex, center, 14, new Color(0.1f, 0.1f, 0.15f));
             FillCircle(tex, center, 8, Color.white);
@@ -116,7 +114,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 4. Player Orbit Halo Ring
         private static void GeneratePlayerHalo()
         {
             string path = $"{SpritesDir}/PlayerHalo.png";
@@ -135,16 +132,12 @@ namespace LightNShadows.Editor
                     float d = Vector2.Distance(new Vector2(x, y), center);
                     if (d >= innerR && d <= outerR)
                     {
-                        // Add 4 notches/breaks for a futuristic reticle look
                         float angle = Mathf.Atan2(y - center.y, x - center.x) * Mathf.Rad2Deg;
                         if (angle < 0) angle += 360f;
                         bool isNotch = (angle > 40 && angle < 50) || (angle > 130 && angle < 140) ||
                                        (angle > 220 && angle < 230) || (angle > 310 && angle < 320);
 
-                        if (!isNotch)
-                        {
-                            tex.SetPixel(x, y, Color.white);
-                        }
+                        if (!isNotch) tex.SetPixel(x, y, Color.white);
                     }
                 }
             }
@@ -152,7 +145,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 5. Player Core Sphere
         private static void GeneratePlayerCore()
         {
             string path = $"{SpritesDir}/PlayerCore.png";
@@ -170,7 +162,6 @@ namespace LightNShadows.Editor
                     float d = Vector2.Distance(new Vector2(x, y), center);
                     if (d <= r)
                     {
-                        // Slight radial bevel
                         float rim = d / r;
                         float brightness = Mathf.Lerp(1f, 0.85f, rim * rim);
                         tex.SetPixel(x, y, new Color(brightness, brightness, brightness, 1f));
@@ -181,7 +172,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 6. Cyber Track (Runway with glowing neon rail)
         private static void GenerateCyberTrack()
         {
             string path = $"{SpritesDir}/CyberTrack.png";
@@ -189,16 +179,12 @@ namespace LightNShadows.Editor
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             ClearTexture(tex);
 
-            // Dark solid base
             FillRect(tex, 0, 0, w, h - 8, new Color(0.12f, 0.13f, 0.18f, 1f));
-
-            // Top glowing neon guide rail
             FillRect(tex, 0, h - 8, w, 8, Color.white);
 
             SaveAndImport(tex, path, 128);
         }
 
-        // 7. Parallax Monolith (Distant futuristic spires)
         private static void GenerateMonolith()
         {
             string path = $"{SpritesDir}/Monolith.png";
@@ -212,6 +198,88 @@ namespace LightNShadows.Editor
 
             DrawTriangle(tex, tip, bL, bR, new Color(1f, 1f, 1f, 0.85f));
             SaveAndImport(tex, path, 128);
+        }
+
+        // --- UI & MENU SPRITES ---
+
+        // Glassmorphism Card Panel Background
+        private static void GenerateUIPanel()
+        {
+            string path = $"{SpritesDir}/UIPanel.png";
+            int w = 256, h = 256;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            ClearTexture(tex);
+
+            Color bg = new Color(0.04f, 0.05f, 0.09f, 0.92f); // Deep dark glass
+            Color border = new Color(0.25f, 0.85f, 1.0f, 0.65f); // Neon cyan border
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    bool isBorder = (x <= 2 || x >= w - 3 || y <= 2 || y >= h - 3);
+                    tex.SetPixel(x, y, isBorder ? border : bg);
+                }
+            }
+
+            SaveAndImport(tex, path, 128);
+        }
+
+        // Cyber Button (Normal & Hover)
+        private static void GenerateUIButton(bool isHover)
+        {
+            string path = isHover ? $"{SpritesDir}/UIButtonHover.png" : $"{SpritesDir}/UIButton.png";
+            int w = 256, h = 64;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            ClearTexture(tex);
+
+            Color baseBg = isHover ? new Color(0.15f, 0.85f, 1.0f, 0.28f) : new Color(0.06f, 0.08f, 0.14f, 0.88f);
+            Color border = isHover ? new Color(0.2f, 0.95f, 1.5f, 1f) : new Color(0.2f, 0.85f, 1.0f, 0.75f);
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    bool isBorder = (x <= 2 || x >= w - 3 || y <= 2 || y >= h - 3);
+                    tex.SetPixel(x, y, isBorder ? border : baseBg);
+                }
+            }
+
+            SaveAndImport(tex, path, 128);
+        }
+
+        // Jump Icon (Upward Arrow)
+        private static void GenerateIconJump()
+        {
+            string path = $"{SpritesDir}/IconJump.png";
+            int s = 64;
+            Texture2D tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
+            ClearTexture(tex);
+
+            Vector2 top = new Vector2(s * 0.5f, s * 0.85f);
+            Vector2 left = new Vector2(s * 0.2f, s * 0.45f);
+            Vector2 right = new Vector2(s * 0.8f, s * 0.45f);
+
+            DrawTriangle(tex, top, left, right, Color.white);
+            FillRect(tex, (int)(s * 0.38f), (int)(s * 0.12f), (int)(s * 0.24f), (int)(s * 0.35f), Color.white);
+
+            SaveAndImport(tex, path, 64);
+        }
+
+        // Phase Icon (Yin-Yang / Dual Realm shift)
+        private static void GenerateIconPhase()
+        {
+            string path = $"{SpritesDir}/IconPhase.png";
+            int s = 64;
+            Texture2D tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
+            ClearTexture(tex);
+
+            Vector2 center = new Vector2(s * 0.5f, s * 0.5f);
+            FillCircle(tex, center, s * 0.44f, new Color(0.2f, 0.85f, 1f));
+            FillCircle(tex, new Vector2(s * 0.5f, s * 0.65f), s * 0.22f, Color.white);
+            FillCircle(tex, new Vector2(s * 0.5f, s * 0.35f), s * 0.22f, new Color(0.06f, 0.08f, 0.12f));
+
+            SaveAndImport(tex, path, 64);
         }
 
         // Drawing Utilities
