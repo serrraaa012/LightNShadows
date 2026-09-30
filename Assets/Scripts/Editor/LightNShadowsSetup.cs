@@ -12,12 +12,15 @@ namespace LightNShadows.Editor
         [MenuItem("Tools/LightNShadows/Auto-Setup Scene")]
         public static void SetupScene()
         {
-            // 1. Generate all custom stylized vector sprites
+            // 1. Generate all custom vector sprites
             SpriteArtGenerator.GenerateAllSprites();
 
             Sprite spikeSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/CrystalSpike.png");
+            Sprite ceilingSpireSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/CeilingSpire.png");
             Sprite gateSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/LaserGate.png");
             Sprite diamondSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/FloatingDiamond.png");
+            Sprite prismOrbSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/PrismOrb.png");
+            Sprite shockwaveSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/ShockwaveRing.png");
             Sprite playerCoreSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/PlayerCore.png");
             Sprite playerHaloSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/PlayerHalo.png");
             Sprite trackSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/CyberTrack.png");
@@ -36,16 +39,13 @@ namespace LightNShadows.Editor
             cam.orthographic = true;
             cam.orthographicSize = 5f;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.96f, 0.94f, 0.90f); // Warm Solar Dawn
+            cam.backgroundColor = new Color(0.96f, 0.94f, 0.90f);
             cam.transform.position = new Vector3(0f, 0f, -10f);
 
             UniversalAdditionalCameraData camData = cam.GetUniversalAdditionalCameraData();
             if (camData != null) camData.renderPostProcessing = true;
 
-            if (cam.GetComponent<CameraShake>() == null)
-            {
-                cam.gameObject.AddComponent<CameraShake>();
-            }
+            if (cam.GetComponent<CameraShake>() == null) cam.gameObject.AddComponent<CameraShake>();
 
             // 3. Setup Global Volume & URP Bloom
             SetupGlobalPostProcessing();
@@ -57,20 +57,21 @@ namespace LightNShadows.Editor
             if (dimMgr == null) dimMgr = dimensionMgrObj.AddComponent<DimensionManager>();
 
             SerializedObject dimSo = new SerializedObject(dimMgr);
-            dimSo.FindProperty("lightBackgroundColor").colorValue = new Color(0.96f, 0.94f, 0.90f); // Warm Solar Dawn
-            dimSo.FindProperty("shadowBackgroundColor").colorValue = new Color(0.035f, 0.04f, 0.08f); // Deep Cosmic Void
+            dimSo.FindProperty("lightBackgroundColor").colorValue = new Color(0.96f, 0.94f, 0.90f);
+            dimSo.FindProperty("shadowBackgroundColor").colorValue = new Color(0.035f, 0.04f, 0.08f);
             dimSo.ApplyModifiedProperties();
 
             GameObject gameMgrObj = GameObject.Find("GameManager");
             if (gameMgrObj == null) gameMgrObj = new GameObject("GameManager");
             if (gameMgrObj.GetComponent<GameManager>() == null) gameMgrObj.AddComponent<GameManager>();
             if (gameMgrObj.GetComponent<UIManager>() == null) gameMgrObj.AddComponent<UIManager>();
+            if (gameMgrObj.GetComponent<FloatingTextManager>() == null) gameMgrObj.AddComponent<FloatingTextManager>();
 
             GameObject soundMgrObj = GameObject.Find("SoundManager");
             if (soundMgrObj == null) soundMgrObj = new GameObject("SoundManager");
             if (soundMgrObj.GetComponent<SoundManager>() == null) soundMgrObj.AddComponent<SoundManager>();
 
-            // 5. Parallax Backdrop (Distant Monoliths)
+            // 5. Parallax Backdrop & Speed Particles
             GameObject parallaxObj = GameObject.Find("ParallaxBackdrop");
             if (parallaxObj == null) parallaxObj = new GameObject("ParallaxBackdrop");
             ParallaxBackdrop pb = parallaxObj.GetComponent<ParallaxBackdrop>();
@@ -79,7 +80,6 @@ namespace LightNShadows.Editor
             pbSo.FindProperty("monolithSprite").objectReferenceValue = monolithSprite;
             pbSo.ApplyModifiedProperties();
 
-            // 6. Ambient Speed Particles
             GameObject bgObj = GameObject.Find("BackgroundParticles");
             if (bgObj == null) bgObj = new GameObject("BackgroundParticles");
             BackgroundParticles bg = bgObj.GetComponent<BackgroundParticles>();
@@ -88,7 +88,7 @@ namespace LightNShadows.Editor
             bgSo.FindProperty("particleSprite").objectReferenceValue = squareSprite;
             bgSo.ApplyModifiedProperties();
 
-            // 7. Setup Cyber Runway Track
+            // 6. Setup Cyber Runway Track
             GameObject groundObj = GameObject.Find("Ground");
             if (groundObj == null) groundObj = new GameObject("Ground");
             groundObj.transform.position = new Vector3(0f, -3.1f, 0f);
@@ -99,20 +99,21 @@ namespace LightNShadows.Editor
             groundSr.sprite = trackSprite;
             groundSr.sortingOrder = 2;
 
-            // 8. Create Styled Obstacle Prefabs
+            if (groundObj.GetComponent<CyberTrackScroller>() == null) groundObj.AddComponent<CyberTrackScroller>();
+
+            // 7. Setup Obstacle Prefabs
             string prefabsDir = "Assets/Prefabs";
             if (!Directory.Exists(prefabsDir)) Directory.CreateDirectory(prefabsDir);
 
-            // A) Crystal Spike Prefab (Ground)
             GameObject spikePrefab = CreateOrUpdatePrefab("Assets/Prefabs/CrystalSpike.prefab", spikeSprite, new Vector3(0.9f, 1.8f, 1f), ObstacleVisualType.CrystalSpike);
-
-            // B) Laser Gate Prefab (Tall Barrier)
+            GameObject ceilingPrefab = CreateOrUpdatePrefab("Assets/Prefabs/CeilingSpire.prefab", ceilingSpireSprite, new Vector3(0.9f, 1.8f, 1f), ObstacleVisualType.CeilingSpire);
             GameObject gatePrefab = CreateOrUpdatePrefab("Assets/Prefabs/LaserGate.prefab", gateSprite, new Vector3(0.9f, 3.8f, 1f), ObstacleVisualType.LaserGate);
-
-            // C) Floating Diamond Drone Prefab (Airborne)
             GameObject diamondPrefab = CreateOrUpdatePrefab("Assets/Prefabs/FloatingDiamond.prefab", diamondSprite, new Vector3(1.1f, 1.1f, 1f), ObstacleVisualType.FloatingDiamond);
 
-            // 9. Setup Spawner
+            // Prism Orb Collectible Prefab
+            GameObject orbPrefab = CreateOrUpdateOrbPrefab("Assets/Prefabs/PrismOrb.prefab", prismOrbSprite);
+
+            // 8. Setup Spawner
             GameObject spawnerObj = GameObject.Find("ObstacleSpawner");
             if (spawnerObj == null) spawnerObj = new GameObject("ObstacleSpawner");
             spawnerObj.transform.position = new Vector3(12f, 0f, 0f);
@@ -122,14 +123,17 @@ namespace LightNShadows.Editor
 
             SerializedObject spawnerSo = new SerializedObject(spawner);
             spawnerSo.FindProperty("crystalSpikePrefab").objectReferenceValue = spikePrefab;
+            spawnerSo.FindProperty("ceilingSpirePrefab").objectReferenceValue = ceilingPrefab;
             spawnerSo.FindProperty("laserGatePrefab").objectReferenceValue = gatePrefab;
             spawnerSo.FindProperty("floatingDiamondPrefab").objectReferenceValue = diamondPrefab;
+            spawnerSo.FindProperty("prismOrbPrefab").objectReferenceValue = orbPrefab;
             spawnerSo.FindProperty("spawnX").floatValue = 12f;
             spawnerSo.FindProperty("groundY").floatValue = -2.15f;
+            spawnerSo.FindProperty("ceilingY").floatValue = 1.95f;
             spawnerSo.FindProperty("airborneY").floatValue = 0.35f;
             spawnerSo.ApplyModifiedProperties();
 
-            // 10. Setup Styled Player
+            // 9. Setup Player
             GameObject playerObj = GameObject.Find("Player");
             if (playerObj == null) playerObj = new GameObject("Player");
             playerObj.SetActive(true);
@@ -157,7 +161,6 @@ namespace LightNShadows.Editor
             trail.sortingOrder = 9;
             trail.material = new Material(Shader.Find("Sprites/Default"));
 
-            // Child Orbit Halo Ring
             Transform haloTrans = playerObj.transform.Find("OrbitHalo");
             GameObject haloObj = (haloTrans != null) ? haloTrans.gameObject : new GameObject("OrbitHalo");
             haloObj.transform.SetParent(playerObj.transform);
@@ -174,6 +177,7 @@ namespace LightNShadows.Editor
             SerializedObject pcSo = new SerializedObject(pc);
             pcSo.FindProperty("spriteRenderer").objectReferenceValue = playerSr;
             pcSo.FindProperty("trailRenderer").objectReferenceValue = trail;
+            pcSo.FindProperty("shockwaveSprite").objectReferenceValue = shockwaveSprite;
             pcSo.FindProperty("groundY").floatValue = -2.4f;
             pcSo.FindProperty("jumpForce").floatValue = 13.5f;
             pcSo.FindProperty("gravity").floatValue = 35f;
@@ -181,8 +185,8 @@ namespace LightNShadows.Editor
             pcSo.FindProperty("lightDimensionColor").colorValue = new Color(0.08f, 0.09f, 0.14f, 1f);
             pcSo.ApplyModifiedProperties();
 
-            Debug.Log("<color=green>[LightNShadows]</color> Complete Theme Overhaul applied! Neon Prism aesthetic active.");
-            EditorUtility.DisplayDialog("LightNShadows", "THEME OVERHAUL COMPLETE!\n\n1. Obstacles: Crystal Spikes, Laser Gates & Floating Diamond Drones\n2. Player: Dual-Core Entity with rotating energy halo ring\n3. Runway: High-tech cyber track with glowing guide rail\n4. Background: Parallax distant monoliths + atmospheric speed motes\n\nPress PLAY to see the transformation!", "Let's Go!");
+            Debug.Log("<color=green>[LightNShadows]</color> Complete Polish & Animation Overhaul applied!");
+            EditorUtility.DisplayDialog("LightNShadows", "MASSIVE POLISH & ANIMATION OVERHAUL APPLIED!\n\n1. Player Animation: Jump Squash & Stretch physics\n2. Realm Shift: Expanding neon shockwave pulse ring\n3. Floating Popups: In-game '+100' & 'COMBO!' notifications\n4. New Hazards: Ceiling Stalactite Spires & The Squeeze Challenge\n5. Collectibles: Floating Prism Gem Orbs along the track\n6. Runway: Animated cyber track scroller\n\nPress PLAY to test!", "Let's Go!");
         }
 
         private static GameObject CreateOrUpdatePrefab(string path, Sprite sprite, Vector3 scale, ObstacleVisualType type)
@@ -196,12 +200,32 @@ namespace LightNShadows.Editor
 
             BoxCollider2D col = temp.AddComponent<BoxCollider2D>();
             col.isTrigger = true;
-            col.size = new Vector2(0.9f, 0.95f);
+            col.size = new Vector2(0.85f, 0.92f);
 
             Obstacle obs = temp.AddComponent<Obstacle>();
             SerializedObject obsSo = new SerializedObject(obs);
             obsSo.FindProperty("visualType").enumValueIndex = (int)type;
             obsSo.ApplyModifiedProperties();
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(temp, path);
+            GameObject.DestroyImmediate(temp);
+            return prefab;
+        }
+
+        private static GameObject CreateOrUpdateOrbPrefab(string path, Sprite sprite)
+        {
+            GameObject temp = new GameObject("TempOrb");
+            temp.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+
+            SpriteRenderer sr = temp.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingOrder = 7;
+
+            CircleCollider2D col = temp.AddComponent<CircleCollider2D>();
+            col.isTrigger = true;
+            col.radius = 0.45f;
+
+            temp.AddComponent<PrismOrb>();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(temp, path);
             GameObject.DestroyImmediate(temp);

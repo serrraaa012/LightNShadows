@@ -5,6 +5,7 @@ namespace LightNShadows
     public enum ObstacleVisualType
     {
         CrystalSpike,
+        CeilingSpire,
         LaserGate,
         FloatingDiamond
     }
@@ -24,25 +25,22 @@ namespace LightNShadows
         [SerializeField] private float offscreenX = -14f;
 
         [Header("Stylized Colors")]
-        // Neutral Hazard: Electric Crimson Neon Red (Fatal in BOTH realms!)
         [SerializeField] private Color neutralCrimsonColor = new Color(1.6f, 0.15f, 0.28f, 1f);
-        // Solar / Light: Radiant Amber & Gold
         [SerializeField] private Color lightSolarColor = new Color(1.4f, 0.85f, 0.2f, 1f); 
-        // Void / Shadow: Electric Cyan Glow
         [SerializeField] private Color shadowVoidColor = new Color(0.2f, 0.95f, 1.5f, 1f); 
         [Range(0.05f, 0.5f)]
-        [SerializeField] private float ghostAlpha = 0.22f;
+        [SerializeField] private float ghostAlpha = 0.2f;
 
         private SpriteRenderer spriteRenderer;
         private float currentSpeed;
-        private float hoverTimer = 0f;
+        private float animTimer = 0f;
         private Vector3 initialPosition;
 
         private void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
             currentSpeed = baseSpeed;
-            hoverTimer = Random.Range(0f, 10f);
+            animTimer = Random.Range(0f, 10f);
         }
 
         private void OnEnable()
@@ -84,13 +82,21 @@ namespace LightNShadows
             }
 
             transform.Translate(Vector3.left * currentSpeed * Time.deltaTime, Space.World);
+            animTimer += Time.deltaTime;
 
+            // 1. Floating Diamond Bobbing & Rotation
             if (visualType == ObstacleVisualType.FloatingDiamond)
             {
-                hoverTimer += Time.deltaTime * 3.5f;
-                transform.position = new Vector3(transform.position.x, initialPosition.y + Mathf.Sin(hoverTimer) * 0.2f, 0f);
+                transform.position = new Vector3(transform.position.x, initialPosition.y + Mathf.Sin(animTimer * 3.8f) * 0.22f, 0f);
+            }
+            // 2. Laser Gate Energy Pulse
+            else if (visualType == ObstacleVisualType.LaserGate)
+            {
+                float pulse = 0.9f + Mathf.PingPong(animTimer * 3.5f, 0.25f);
+                transform.localScale = new Vector3(pulse * 0.9f, transform.localScale.y, 1f);
             }
 
+            // Recycle off-screen
             if (transform.position.x < offscreenX)
             {
                 Destroy(gameObject);
@@ -106,7 +112,6 @@ namespace LightNShadows
         {
             if (spriteRenderer == null) return;
 
-            // Neutral hazards are ALWAYS solid crimson red
             if (dimension == DimensionType.Neutral)
             {
                 spriteRenderer.color = neutralCrimsonColor;
@@ -115,14 +120,12 @@ namespace LightNShadows
 
             Color baseColor = (dimension == DimensionType.Light) ? lightSolarColor : shadowVoidColor;
 
-            // Solid and deadly if matching active dimension
             if (activeDimension == dimension)
             {
                 baseColor.a = 1.0f;
             }
             else
             {
-                // Holographic ghost: safe to phase through
                 baseColor.a = ghostAlpha;
             }
 
@@ -134,7 +137,7 @@ namespace LightNShadows
             if (spriteRenderer != null && dimension != DimensionType.Neutral)
             {
                 Color c = spriteRenderer.color;
-                c.a = 0.6f;
+                c.a = 0.65f;
                 spriteRenderer.color = c;
             }
         }

@@ -18,12 +18,15 @@ namespace LightNShadows.Editor
             }
 
             GenerateCrystalSpike();
+            GenerateCeilingSpire();
             GenerateLaserGate();
             GenerateFloatingDiamond();
+            GeneratePrismOrb();
             GeneratePlayerHalo();
             GeneratePlayerCore();
             GenerateCyberTrack();
             GenerateMonolith();
+            GenerateShockwaveRing();
 
             // UI Sprites
             GenerateUIPanel();
@@ -37,6 +40,7 @@ namespace LightNShadows.Editor
 
         // --- GAMEPLAY SPRITES ---
 
+        // 1. Ground Crystal Spike
         private static void GenerateCrystalSpike()
         {
             string path = $"{SpritesDir}/CrystalSpike.png";
@@ -59,6 +63,30 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
+        // 2. Ceiling Hanging Stalactite Spire (Downward hazard)
+        private static void GenerateCeilingSpire()
+        {
+            string path = $"{SpritesDir}/CeilingSpire.png";
+            int w = 128, h = 256;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            ClearTexture(tex);
+
+            Vector2 tip = new Vector2(w * 0.5f, h * 0.05f);
+            Vector2 topL = new Vector2(w * 0.15f, h * 0.95f);
+            Vector2 topR = new Vector2(w * 0.85f, h * 0.95f);
+            Vector2 facetMid = new Vector2(w * 0.5f, h * 0.95f);
+
+            DrawTriangle(tex, topL, tip, facetMid, new Color(0.85f, 0.85f, 0.9f, 1f));
+            DrawTriangle(tex, facetMid, tip, topR, new Color(1f, 1f, 1f, 1f));
+
+            DrawLine(tex, topL, tip, Color.white, 3);
+            DrawLine(tex, topR, tip, Color.white, 3);
+            DrawLine(tex, facetMid, tip, new Color(0.7f, 0.7f, 0.8f, 0.9f), 2);
+
+            SaveAndImport(tex, path, 128);
+        }
+
+        // 3. Tall Laser Gate
         private static void GenerateLaserGate()
         {
             string path = $"{SpritesDir}/LaserGate.png";
@@ -87,6 +115,7 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
+        // 4. Floating Diamond Drone
         private static void GenerateFloatingDiamond()
         {
             string path = $"{SpritesDir}/FloatingDiamond.png";
@@ -114,6 +143,67 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
+        // 5. Collectible Prism Orb
+        private static void GeneratePrismOrb()
+        {
+            string path = $"{SpritesDir}/PrismOrb.png";
+            int size = 96;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            ClearTexture(tex);
+
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            float radius = size * 0.4f;
+
+            // Outer octagonal diamond gem
+            int sides = 8;
+            Vector2[] pts = new Vector2[sides];
+            for (int i = 0; i < sides; i++)
+            {
+                float ang = (i * 360f / sides + 22.5f) * Mathf.Deg2Rad;
+                pts[i] = center + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * radius;
+            }
+
+            for (int i = 0; i < sides; i++)
+            {
+                Vector2 next = pts[(i + 1) % sides];
+                Color c = (i % 2 == 0) ? Color.white : new Color(0.85f, 0.92f, 1f);
+                DrawTriangle(tex, center, pts[i], next, c);
+                DrawLine(tex, pts[i], next, Color.white, 2);
+            }
+
+            FillCircle(tex, center, radius * 0.35f, Color.white);
+            SaveAndImport(tex, path, 96);
+        }
+
+        // 6. Shockwave Ring (Dimension shift pulse)
+        private static void GenerateShockwaveRing()
+        {
+            string path = $"{SpritesDir}/ShockwaveRing.png";
+            int size = 128;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            ClearTexture(tex);
+
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            float inner = 48f;
+            float outer = 60f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), center);
+                    if (d >= inner && d <= outer)
+                    {
+                        float alpha = 1f - Mathf.Abs(d - (inner + outer) * 0.5f) / ((outer - inner) * 0.5f);
+                        tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                    }
+                }
+            }
+
+            SaveAndImport(tex, path, 128);
+        }
+
+        // 7. Player Orbit Halo
         private static void GeneratePlayerHalo()
         {
             string path = $"{SpritesDir}/PlayerHalo.png";
@@ -145,6 +235,7 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
+        // 8. Player Core
         private static void GeneratePlayerCore()
         {
             string path = $"{SpritesDir}/PlayerCore.png";
@@ -172,6 +263,7 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
+        // 9. Cyber Track
         private static void GenerateCyberTrack()
         {
             string path = $"{SpritesDir}/CyberTrack.png";
@@ -185,6 +277,7 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
+        // 10. Monolith
         private static void GenerateMonolith()
         {
             string path = $"{SpritesDir}/Monolith.png";
@@ -200,9 +293,8 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // --- UI & MENU SPRITES ---
+        // --- UI SPRITES ---
 
-        // Glassmorphism Card Panel Background
         private static void GenerateUIPanel()
         {
             string path = $"{SpritesDir}/UIPanel.png";
@@ -210,8 +302,8 @@ namespace LightNShadows.Editor
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             ClearTexture(tex);
 
-            Color bg = new Color(0.04f, 0.05f, 0.09f, 0.92f); // Deep dark glass
-            Color border = new Color(0.25f, 0.85f, 1.0f, 0.65f); // Neon cyan border
+            Color bg = new Color(0.04f, 0.05f, 0.09f, 0.94f);
+            Color border = new Color(0.25f, 0.85f, 1.0f, 0.7f);
 
             for (int y = 0; y < h; y++)
             {
@@ -225,7 +317,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // Cyber Button (Normal & Hover)
         private static void GenerateUIButton(bool isHover)
         {
             string path = isHover ? $"{SpritesDir}/UIButtonHover.png" : $"{SpritesDir}/UIButton.png";
@@ -233,7 +324,7 @@ namespace LightNShadows.Editor
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             ClearTexture(tex);
 
-            Color baseBg = isHover ? new Color(0.15f, 0.85f, 1.0f, 0.28f) : new Color(0.06f, 0.08f, 0.14f, 0.88f);
+            Color baseBg = isHover ? new Color(0.15f, 0.85f, 1.0f, 0.32f) : new Color(0.06f, 0.08f, 0.14f, 0.92f);
             Color border = isHover ? new Color(0.2f, 0.95f, 1.5f, 1f) : new Color(0.2f, 0.85f, 1.0f, 0.75f);
 
             for (int y = 0; y < h; y++)
@@ -248,7 +339,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // Jump Icon (Upward Arrow)
         private static void GenerateIconJump()
         {
             string path = $"{SpritesDir}/IconJump.png";
@@ -266,7 +356,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 64);
         }
 
-        // Phase Icon (Yin-Yang / Dual Realm shift)
         private static void GenerateIconPhase()
         {
             string path = $"{SpritesDir}/IconPhase.png";

@@ -8,35 +8,38 @@ namespace LightNShadows
     {
         [Header("Visuals")]
         [SerializeField] private SpriteRenderer spriteRenderer;
-        [SerializeField] private Color lightDimensionColor = new Color(0.08f, 0.08f, 0.12f); // Dark silhouette in Light
-        [SerializeField] private Color shadowDimensionColor = new Color(1f, 1f, 1f);          // Pure luminous white in Shadow
+        [SerializeField] private Color lightDimensionColor = new Color(0.08f, 0.08f, 0.12f);
+        [SerializeField] private Color shadowDimensionColor = new Color(1.3f, 1.35f, 1.5f, 1f);
         [SerializeField] private TrailRenderer trailRenderer;
+        [SerializeField] private Sprite shockwaveSprite;
 
         [Header("Movement & Jump")]
-        [SerializeField] private float jumpForce = 13f;
+        [SerializeField] private float jumpForce = 13.5f;
         [SerializeField] private float gravity = 35f;
         [SerializeField] private float groundY = -2.4f;
         [SerializeField] private bool allowJump = true;
 
-        [Header("Juice & Effects")]
-        [SerializeField] private ParticleSystem phaseParticles;
-        [SerializeField] private ParticleSystem deathParticles;
-        [SerializeField] private float pulseScale = 1.3f;
-
         private float verticalVelocity = 0f;
         private bool isGrounded = true;
-        private Vector3 originalScale;
-        private Coroutine pulseCoroutine;
+        private Vector3 baseScale;
+        private Coroutine squashCoroutine;
 
         private void Awake()
         {
             if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
-            originalScale = transform.localScale;
+            baseScale = transform.localScale;
 
-            // Ensure player stays at ground level on startup
             Vector3 pos = transform.position;
             pos.y = groundY;
             transform.position = pos;
+
+            if (shockwaveSprite == null)
+            {
+                shockwaveSprite = Resources.Load<Sprite>("Sprites/ShockwaveRing");
+#if UNITY_EDITOR
+                if (shockwaveSprite == null) shockwaveSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/ShockwaveRing.png");
+#endif
+            }
         }
 
         private void OnEnable()
@@ -59,17 +62,17 @@ namespace LightNShadows
 
         private void Update()
         {
-            if (GameManager.Instance != null && GameManager.Instance.IsGameOver)
+            if (GameManager.Instance != null && (!GameManager.Instance.IsPlaying || GameManager.Instance.IsGameOver))
             {
                 return;
             }
 
-            HandleJump();
+            HandleJumpPhysics();
         }
 
-        private void HandleJump()
+        private void HandleJumpPhysics()
         {
-            // Jump trigger
+            // Jump Trigger
             if (allowJump && (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)))
             {
                 if (isGrounded)
@@ -77,35 +80,80 @@ namespace LightNShadows
                     verticalVelocity = jumpForce;
                     isGrounded = false;
                     if (SoundManager.Instance != null) SoundManager.Instance.PlayJump();
+
+                    // Jump Stretch Animation (Taller, thinner)
+                    ApplySquashStretch(new Vector3(0.78f, 1.32f, 1f), 0.18f);
                 }
             }
 
-            // Bulletproof jump physics (cannot fall through ground)
+            // Airborne physics
             if (!isGrounded)
             {
                 verticalVelocity -= gravity * Time.deltaTime;
                 Vector3 pos = transform.position;
                 pos.y += verticalVelocity * Time.deltaTime;
 
+                // Check landing
                 if (pos.y <= groundY)
                 {
                     pos.y = groundY;
                     verticalVelocity = 0f;
                     isGrounded = true;
+
+                    // Landing Squash Animation (Wider, flatter)
+                    ApplySquashStretch(new Vector3(1.35f, 0.72f, 1f), 0.16f);
                 }
 
                 transform.position = pos;
             }
         }
 
+        private void ApplySquashStretch(Vector3 targetScaleMultiplier, float duration)
+        {
+            if (squashCoroutine != null) StopCoroutine(squashCoroutine);
+            squashCoroutine = StartCoroutine(SquashRoutine(targetScaleMultiplier, duration));
+        }
+
+        private IEnumerator SquashRoutine(Vector3 targetScaleMultiplier, float duration)
+        {
+            Vector3 targetScale = Vector3.Scale(baseScale, targetScaleMultiplier);
+            float elapsed = 0f;
+            float halfDur = duration * 0.45f;
+
+            // Push to squash/stretch target
+            while (elapsed < halfDur)
+            {
+                transform.localScale = Vector3.Lerp(baseScale, targetScale, elapsed / halfDur);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            elapsed = 0f;
+            float returnDur = duration * 0.55f;
+            // Spring back to normal scale
+            while (elapsed < returnDur)
+            {
+                transform.localScale = Vector3.Lerp(targetScale, baseScale, elapsed / returnDur);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            transform.localScale = baseScale;
+            squashCoroutine = null;
+        }
+
         private void HandleDimensionChanged(DimensionType newDimension)
         {
             ApplyVisuals(newDimension);
-            TriggerPulseEffect();
 
-            if (phaseParticles != null)
+            // Expanding Shockwave Pulse on Dimension Shift
+            Color waveColor = (newDimension == DimensionType.Light) 
+                ? new Color(0.95f, 0.6f, 0.1f) 
+                : new Color(0.2f, 0.95f, 1.5f);
+
+            if (shockwaveSprite != null)
             {
-                phaseParticles.Play();
+                ShockwavePulse.Create(transform.position, waveColor, shockwaveSprite);
             }
         }
 
@@ -123,36 +171,6 @@ namespace LightNShadows
                 endCol.a = 0f;
                 trailRenderer.endColor = endCol;
             }
-        }
-
-        private void TriggerPulseEffect()
-        {
-            if (pulseCoroutine != null) StopCoroutine(pulseCoroutine);
-            pulseCoroutine = StartCoroutine(PulseRoutine());
-        }
-
-        private IEnumerator PulseRoutine()
-        {
-            Vector3 peakScale = originalScale * pulseScale;
-            float elapsed = 0f;
-            float duration = 0.12f;
-
-            while (elapsed < duration)
-            {
-                transform.localScale = Vector3.Lerp(originalScale, peakScale, elapsed / duration);
-                elapsed += Time.deltaTime;
-                yield return null;
-            }
-
-            elapsed = 0f;
-            while (elapsed < duration)
-            {
-                transform.localScale = Vector3.Lerp(peakScale, originalScale, elapsed / duration);
-                elapsed += Time.deltaTime;
-                yield return null;
-            }
-
-            transform.localScale = originalScale;
         }
 
         private void OnTriggerEnter2D(Collider2D collision)
@@ -181,9 +199,22 @@ namespace LightNShadows
                 // Phased safely through opposite dimension!
                 obstacle.OnPlayerPhasedThrough();
                 if (SoundManager.Instance != null) SoundManager.Instance.PlayPhase();
+
                 if (GameManager.Instance != null)
                 {
                     GameManager.Instance.RegisterPhaseSuccess();
+                }
+
+                // Spawn floating popup
+                if (FloatingTextManager.Instance != null)
+                {
+                    Color textCol = (currentDim == DimensionType.Light) 
+                        ? new Color(0.1f, 0.9f, 1.4f) 
+                        : new Color(1.3f, 0.85f, 0.2f);
+
+                    int combo = (GameManager.Instance != null) ? GameManager.Instance.ComboCount : 1;
+                    string label = (combo > 1) ? $"COMBO x{combo}!" : "+50";
+                    FloatingTextManager.Instance.SpawnPopup(transform.position, label, textCol);
                 }
             }
         }
