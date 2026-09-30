@@ -5,20 +5,22 @@ namespace LightNShadows
 {
     public class ObstacleSpawner : MonoBehaviour
     {
-        [Header("Prefabs")]
-        [SerializeField] private GameObject obstaclePrefab;
+        [Header("Styled Prefabs")]
+        [SerializeField] private GameObject crystalSpikePrefab;
+        [SerializeField] private GameObject laserGatePrefab;
+        [SerializeField] private GameObject floatingDiamondPrefab;
 
         [Header("Spawn Layout Coordinates")]
         [SerializeField] private float spawnX = 12f;
-        [SerializeField] private float groundY = -1.9f;
-        [SerializeField] private float floatingY = 0.5f;
+        [SerializeField] private float groundY = -2.15f;
+        [SerializeField] private float airborneY = 0.35f;
 
         [Header("Difficulty & Speed Scaling")]
-        [SerializeField] private float initialSpawnInterval = 2.2f;
-        [SerializeField] private float minSpawnInterval = 1.1f;
-        [SerializeField] private float initialSpeed = 6.5f;
-        [SerializeField] private float maxSpeed = 12.5f;
-        [SerializeField] private float difficultyRampTime = 60f; // Seconds to max difficulty
+        [SerializeField] private float initialSpawnInterval = 2.1f;
+        [SerializeField] private float minSpawnInterval = 1.05f;
+        [SerializeField] private float initialSpeed = 6.8f;
+        [SerializeField] private float maxSpeed = 13.0f;
+        [SerializeField] private float difficultyRampTime = 60f;
 
         private float timer = 0f;
         private float gameTime = 0f;
@@ -40,7 +42,7 @@ namespace LightNShadows
             if (!isSpawningStarted)
             {
                 isSpawningStarted = true;
-                timer = 1.0f; // 1s breather after pressing Start
+                timer = 1.0f;
                 return;
             }
 
@@ -59,99 +61,106 @@ namespace LightNShadows
 
         private void ChooseAndExecutePattern(float speed, float progress)
         {
-            if (obstaclePrefab == null) return;
-
-            // Roll a pattern based on game progression
             float roll = Random.value;
 
             if (progress < 0.25f)
             {
-                // Early game: single obstacles and occasional gates
-                if (roll < 0.7f)
+                // Early game: Introduce Red Spike (Must Jump) and Realm Gate (Must Phase)
+                if (roll < 0.5f)
                 {
-                    SpawnSingle(speed, RandomDimension(), groundY, 1.8f);
+                    // Red Spike -> MUST JUMP!
+                    SpawnObstacle(crystalSpikePrefab, spawnX, groundY, DimensionType.Neutral, speed, ObstacleVisualType.CrystalSpike);
                 }
                 else
                 {
-                    SpawnTallGate(speed, RandomDimension());
+                    // Tall Realm Gate -> MUST PHASE!
+                    SpawnObstacle(laserGatePrefab, spawnX, -0.65f, RandomRealm(), speed, ObstacleVisualType.LaserGate);
                 }
             }
-            else if (progress < 0.6f)
+            else if (progress < 0.65f)
             {
-                // Mid game: mix in double swaps
-                if (roll < 0.45f)
+                // Mid game: Combos (Jump + Phase combinations)
+                if (roll < 0.35f)
                 {
-                    SpawnSingle(speed, RandomDimension(), (Random.value > 0.4f) ? groundY : floatingY, 1.8f);
+                    // Red Spike
+                    SpawnObstacle(crystalSpikePrefab, spawnX, groundY, DimensionType.Neutral, speed, ObstacleVisualType.CrystalSpike);
                 }
-                else if (roll < 0.75f)
+                else if (roll < 0.65f)
                 {
-                    SpawnTallGate(speed, RandomDimension());
+                    // Realm Gate
+                    SpawnObstacle(laserGatePrefab, spawnX, -0.65f, RandomRealm(), speed, ObstacleVisualType.LaserGate);
+                }
+                else if (roll < 0.82f)
+                {
+                    // Floating Drone
+                    SpawnObstacle(floatingDiamondPrefab, spawnX, airborneY, RandomRealm(), speed, ObstacleVisualType.FloatingDiamond);
                 }
                 else
                 {
-                    StartCoroutine(SpawnDoubleSwapRoutine(speed));
+                    // Quick Combo: Red Spike (Jump) -> Realm Gate (Phase)
+                    StartCoroutine(SpawnJumpThenPhaseCombo(speed));
                 }
             }
             else
             {
-                // Intense late game: fast rhythm sequences and mixed gates
+                // Late game: fast rhythmic sequences
                 if (roll < 0.35f)
                 {
-                    SpawnTallGate(speed, RandomDimension());
+                    StartCoroutine(SpawnJumpThenPhaseCombo(speed));
                 }
                 else if (roll < 0.7f)
                 {
-                    StartCoroutine(SpawnDoubleSwapRoutine(speed));
+                    StartCoroutine(SpawnDoubleGateRoutine(speed));
                 }
                 else
                 {
-                    StartCoroutine(SpawnRhythmRunRoutine(speed));
+                    StartCoroutine(SpawnTripleGauntlet(speed));
                 }
             }
         }
 
-        private void SpawnSingle(float speed, DimensionType type, float yPos, float height)
+        private void SpawnObstacle(GameObject prefab, float x, float y, DimensionType dim, float speed, ObstacleVisualType visualType)
         {
-            GameObject obj = Instantiate(obstaclePrefab, new Vector3(spawnX, yPos, 0f), Quaternion.identity);
-            obj.transform.localScale = new Vector3(0.75f, height, 1f);
+            if (prefab == null) return;
 
+            GameObject obj = Instantiate(prefab, new Vector3(x, y, 0f), Quaternion.identity);
             Obstacle obs = obj.GetComponent<Obstacle>();
-            if (obs != null) obs.Setup(type, speed);
-        }
-
-        private void SpawnTallGate(float speed, DimensionType type)
-        {
-            // A tall 3.8 unit pillar: cannot be jumped over, MUST be phased through!
-            GameObject obj = Instantiate(obstaclePrefab, new Vector3(spawnX, -1.0f, 0f), Quaternion.identity);
-            obj.transform.localScale = new Vector3(0.85f, 3.8f, 1f);
-
-            Obstacle obs = obj.GetComponent<Obstacle>();
-            if (obs != null) obs.Setup(type, speed);
-        }
-
-        private IEnumerator SpawnDoubleSwapRoutine(float speed)
-        {
-            DimensionType first = RandomDimension();
-            DimensionType second = (first == DimensionType.Light) ? DimensionType.Shadow : DimensionType.Light;
-
-            SpawnSingle(speed, first, groundY, 1.8f);
-            yield return new WaitForSeconds(0.42f);
-            SpawnSingle(speed, second, groundY, 1.8f);
-        }
-
-        private IEnumerator SpawnRhythmRunRoutine(float speed)
-        {
-            // Rapid 3-beat rhythm sequence: Light -> Shadow -> Light
-            DimensionType current = RandomDimension();
-            for (int i = 0; i < 3; i++)
+            if (obs != null)
             {
-                SpawnSingle(speed, current, groundY, 1.7f);
-                current = (current == DimensionType.Light) ? DimensionType.Shadow : DimensionType.Light;
-                yield return new WaitForSeconds(0.48f);
+                obs.Setup(dim, speed, visualType);
             }
         }
 
-        private DimensionType RandomDimension()
+        // Combo 1: Red Spike (Must Jump!) -> Realm Gate (Must Phase!)
+        private IEnumerator SpawnJumpThenPhaseCombo(float speed)
+        {
+            SpawnObstacle(crystalSpikePrefab, spawnX, groundY, DimensionType.Neutral, speed, ObstacleVisualType.CrystalSpike);
+            yield return new WaitForSeconds(0.65f);
+            SpawnObstacle(laserGatePrefab, spawnX, -0.65f, RandomRealm(), speed, ObstacleVisualType.LaserGate);
+        }
+
+        // Combo 2: Double Realm Gate (Phase -> Swap -> Phase)
+        private IEnumerator SpawnDoubleGateRoutine(float speed)
+        {
+            DimensionType first = RandomRealm();
+            DimensionType second = (first == DimensionType.Light) ? DimensionType.Shadow : DimensionType.Light;
+
+            SpawnObstacle(laserGatePrefab, spawnX, -0.65f, first, speed, ObstacleVisualType.LaserGate);
+            yield return new WaitForSeconds(0.62f);
+            SpawnObstacle(laserGatePrefab, spawnX, -0.65f, second, speed, ObstacleVisualType.LaserGate);
+        }
+
+        // Combo 3: Jump -> Gate -> Airborne Drone
+        private IEnumerator SpawnTripleGauntlet(float speed)
+        {
+            SpawnObstacle(crystalSpikePrefab, spawnX, groundY, DimensionType.Neutral, speed, ObstacleVisualType.CrystalSpike);
+            yield return new WaitForSeconds(0.55f);
+            SpawnObstacle(laserGatePrefab, spawnX, -0.65f, RandomRealm(), speed, ObstacleVisualType.LaserGate);
+            yield return new WaitForSeconds(0.55f);
+            SpawnObstacle(floatingDiamondPrefab, spawnX, airborneY, RandomRealm(), speed, ObstacleVisualType.FloatingDiamond);
+        }
+
+        private DimensionType RandomRealm()
         {
             return (Random.value > 0.5f) ? DimensionType.Light : DimensionType.Shadow;
         }

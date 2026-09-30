@@ -2,33 +2,47 @@ using UnityEngine;
 
 namespace LightNShadows
 {
+    public enum ObstacleVisualType
+    {
+        CrystalSpike,
+        LaserGate,
+        FloatingDiamond
+    }
+
     [RequireComponent(typeof(SpriteRenderer), typeof(Collider2D))]
     public class Obstacle : MonoBehaviour
     {
-        [Header("Obstacle Dimension")]
+        [Header("Dimension State")]
         [SerializeField] private DimensionType dimension = DimensionType.Light;
         public DimensionType Dimension => dimension;
+
+        [Header("Visual Subtype")]
+        [SerializeField] private ObstacleVisualType visualType = ObstacleVisualType.CrystalSpike;
 
         [Header("Movement")]
         [SerializeField] private float baseSpeed = 7f;
         [SerializeField] private float offscreenX = -14f;
 
-        [Header("Visuals")]
-        [SerializeField] private SpriteRenderer spriteRenderer;
-        [SerializeField] private Color lightObstacleColor = new Color(0.95f, 0.95f, 0.98f, 1f); // Bright white
-        [SerializeField] private Color shadowObstacleColor = new Color(0.08f, 0.08f, 0.12f, 1f); // Dark silhouette
-        [Range(0.1f, 1f)]
-        [SerializeField] private float ghostAlpha = 0.25f;
+        [Header("Stylized Colors")]
+        // Neutral Hazard: Electric Crimson Neon Red (Fatal in BOTH realms!)
+        [SerializeField] private Color neutralCrimsonColor = new Color(1.6f, 0.15f, 0.28f, 1f);
+        // Solar / Light: Radiant Amber & Gold
+        [SerializeField] private Color lightSolarColor = new Color(1.4f, 0.85f, 0.2f, 1f); 
+        // Void / Shadow: Electric Cyan Glow
+        [SerializeField] private Color shadowVoidColor = new Color(0.2f, 0.95f, 1.5f, 1f); 
+        [Range(0.05f, 0.5f)]
+        [SerializeField] private float ghostAlpha = 0.22f;
 
-        [Header("Particles / Feedback")]
-        [SerializeField] private ParticleSystem phaseSuccessEffect;
-
+        private SpriteRenderer spriteRenderer;
         private float currentSpeed;
+        private float hoverTimer = 0f;
+        private Vector3 initialPosition;
 
         private void Awake()
         {
-            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+            spriteRenderer = GetComponent<SpriteRenderer>();
             currentSpeed = baseSpeed;
+            hoverTimer = Random.Range(0f, 10f);
         }
 
         private void OnEnable()
@@ -43,20 +57,19 @@ namespace LightNShadows
 
         private void Start()
         {
+            initialPosition = transform.position;
             if (DimensionManager.Instance != null)
             {
                 UpdateVisualState(DimensionManager.Instance.CurrentDimension);
             }
-            else
-            {
-                UpdateVisualState(DimensionType.Light);
-            }
         }
 
-        public void Setup(DimensionType type, float speed)
+        public void Setup(DimensionType type, float speed, ObstacleVisualType vType = ObstacleVisualType.CrystalSpike)
         {
             dimension = type;
             currentSpeed = speed;
+            visualType = vType;
+
             if (DimensionManager.Instance != null)
             {
                 UpdateVisualState(DimensionManager.Instance.CurrentDimension);
@@ -70,10 +83,14 @@ namespace LightNShadows
                 return;
             }
 
-            // Move left towards the player
-            transform.Translate(Vector3.left * currentSpeed * Time.deltaTime);
+            transform.Translate(Vector3.left * currentSpeed * Time.deltaTime, Space.World);
 
-            // Destroy when far off-screen
+            if (visualType == ObstacleVisualType.FloatingDiamond)
+            {
+                hoverTimer += Time.deltaTime * 3.5f;
+                transform.position = new Vector3(transform.position.x, initialPosition.y + Mathf.Sin(hoverTimer) * 0.2f, 0f);
+            }
+
             if (transform.position.x < offscreenX)
             {
                 Destroy(gameObject);
@@ -89,16 +106,23 @@ namespace LightNShadows
         {
             if (spriteRenderer == null) return;
 
-            Color baseColor = (dimension == DimensionType.Light) ? lightObstacleColor : shadowObstacleColor;
+            // Neutral hazards are ALWAYS solid crimson red
+            if (dimension == DimensionType.Neutral)
+            {
+                spriteRenderer.color = neutralCrimsonColor;
+                return;
+            }
 
-            // If active dimension is the same as the obstacle, it is SOLID and FATAL!
-            // If active dimension is opposite, it is GHOSTED (phasing is safe).
+            Color baseColor = (dimension == DimensionType.Light) ? lightSolarColor : shadowVoidColor;
+
+            // Solid and deadly if matching active dimension
             if (activeDimension == dimension)
             {
                 baseColor.a = 1.0f;
             }
             else
             {
+                // Holographic ghost: safe to phase through
                 baseColor.a = ghostAlpha;
             }
 
@@ -107,9 +131,11 @@ namespace LightNShadows
 
         public void OnPlayerPhasedThrough()
         {
-            if (phaseSuccessEffect != null)
+            if (spriteRenderer != null && dimension != DimensionType.Neutral)
             {
-                phaseSuccessEffect.Play();
+                Color c = spriteRenderer.color;
+                c.a = 0.6f;
+                spriteRenderer.color = c;
             }
         }
     }

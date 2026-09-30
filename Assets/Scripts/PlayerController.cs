@@ -164,7 +164,14 @@ namespace LightNShadows
                 ? DimensionManager.Instance.CurrentDimension 
                 : DimensionType.Light;
 
-            // If active dimension matches obstacle, it is FATAL!
+            // 1. Neutral Crimson Hazards: FATAL in BOTH realms! MUST BE JUMPED OVER!
+            if (obstacle.Dimension == DimensionType.Neutral)
+            {
+                Die();
+                return;
+            }
+
+            // 2. Realm Gates: Fatal if matching your realm, phase safely if opposite
             if (obstacle.Dimension == currentDim)
             {
                 Die();

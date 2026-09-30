@@ -162,19 +162,20 @@ namespace LightNShadows
             // 1. TITLE SCREEN
             if (currentState == GameState.Title)
             {
-                float midY = Screen.height * 0.32f;
+                float midY = Screen.height * 0.30f;
                 GUI.Label(new Rect(0, midY, Screen.width, 60), "LIGHT  N  SHADOWS", titleStyle);
 
                 subStyle.fontSize = 22;
-                GUI.Label(new Rect(0, midY + 75, Screen.width, 35), "Phase through the realm. Master the rhythm.", subStyle);
+                GUI.Label(new Rect(0, midY + 70, Screen.width, 35), "Phase through realms. Leap over crimson hazards.", subStyle);
 
                 subStyle.fontSize = 20;
                 subStyle.fontStyle = FontStyle.Bold;
-                GUI.Label(new Rect(0, midY + 125, Screen.width, 35), "[ SPACEBAR / CLICK ] to Begin", subStyle);
+                GUI.Label(new Rect(0, midY + 115, Screen.width, 35), "[ SPACEBAR / CLICK ] to Begin", subStyle);
 
                 subStyle.fontStyle = FontStyle.Normal;
                 subStyle.fontSize = 17;
-                GUI.Label(new Rect(0, midY + 175, Screen.width, 35), "SPACE / CLICK = Swap Realm   |   W / UP = Jump", subStyle);
+                GUI.Label(new Rect(0, midY + 165, Screen.width, 30), "W / UP ARROW = Jump over RED Spikes (Cannot phase!)", subStyle);
+                GUI.Label(new Rect(0, midY + 195, Screen.width, 30), "SPACE / CLICK = Swap Realm to phase through TALL GATES", subStyle);
                 return;
             }
 
