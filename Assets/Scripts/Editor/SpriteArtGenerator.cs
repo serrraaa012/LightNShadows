@@ -46,7 +46,7 @@ namespace LightNShadows.Editor
         {
             string bgSource = Path.Combine(BrainDir, ".user_uploaded/media_1790877488173.jpg");
             string bgDaySource = Path.Combine(BrainDir, "cartoon_day_town_1790878418893.jpg");
-            string logoSource = Path.Combine(BrainDir, "game_title_logo_1790875829034.jpg");
+            string logoSource = Path.Combine(BrainDir, "splash_title_clean_1790884301057.jpg");
 
             string bgDest = $"{SpritesDir}/GameBackground.jpg";
             string bgDayDest = $"{SpritesDir}/GameBackground_Day.jpg";

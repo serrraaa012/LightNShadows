@@ -20,9 +20,9 @@ namespace LightNShadows.Editor
                     ResetHighScore();
                 }
 
-                if (EditorPrefs.GetBool("LightNShadows_FontSetup_v2", true))
+                if (EditorPrefs.GetBool("LightNShadows_SplashSetup_v1", true))
                 {
-                    EditorPrefs.SetBool("LightNShadows_FontSetup_v2", false);
+                    EditorPrefs.SetBool("LightNShadows_SplashSetup_v1", false);
                     SetupSceneInternal(false);
                 }
 
