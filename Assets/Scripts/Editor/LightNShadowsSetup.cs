@@ -20,6 +20,12 @@ namespace LightNShadows.Editor
                     ResetHighScore();
                 }
 
+                if (EditorPrefs.GetBool("LightNShadows_FontSetup_v2", true))
+                {
+                    EditorPrefs.SetBool("LightNShadows_FontSetup_v2", false);
+                    SetupSceneInternal(false);
+                }
+
                 if (EditorPrefs.GetBool("LightNShadows_NeedsSetup_v6", true))
                 {
                     EditorPrefs.SetBool("LightNShadows_NeedsSetup_v6", false);
@@ -96,8 +102,36 @@ namespace LightNShadows.Editor
             GameObject gameMgrObj = GameObject.Find("GameManager");
             if (gameMgrObj == null) gameMgrObj = new GameObject("GameManager");
             if (gameMgrObj.GetComponent<GameManager>() == null) gameMgrObj.AddComponent<GameManager>();
-            if (gameMgrObj.GetComponent<UIManager>() == null) gameMgrObj.AddComponent<UIManager>();
-            if (gameMgrObj.GetComponent<FloatingTextManager>() == null) gameMgrObj.AddComponent<FloatingTextManager>();
+
+            UIManager uiMgr = gameMgrObj.GetComponent<UIManager>();
+            if (uiMgr == null) uiMgr = gameMgrObj.AddComponent<UIManager>();
+
+            FloatingTextManager ftMgr = gameMgrObj.GetComponent<FloatingTextManager>();
+            if (ftMgr == null) ftMgr = gameMgrObj.AddComponent<FloatingTextManager>();
+
+            // Refresh and import stylized fonts
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset("Assets/Fonts/Righteous-Regular.ttf", ImportAssetOptions.ForceUpdate);
+            AssetDatabase.ImportAsset("Assets/Fonts/Audiowide-Regular.ttf", ImportAssetOptions.ForceUpdate);
+            AssetDatabase.ImportAsset("Assets/Fonts/RussoOne-Regular.ttf", ImportAssetOptions.ForceUpdate);
+            AssetDatabase.ImportAsset("Assets/Resources/Fonts/Righteous-Regular.ttf", ImportAssetOptions.ForceUpdate);
+            AssetDatabase.ImportAsset("Assets/Resources/Fonts/Audiowide-Regular.ttf", ImportAssetOptions.ForceUpdate);
+            AssetDatabase.ImportAsset("Assets/Resources/Fonts/RussoOne-Regular.ttf", ImportAssetOptions.ForceUpdate);
+
+            Font righteousFont = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Righteous-Regular.ttf");
+            Font audiowideFont = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Audiowide-Regular.ttf");
+
+            if (righteousFont != null || audiowideFont != null)
+            {
+                SerializedObject uiSo = new SerializedObject(uiMgr);
+                if (righteousFont != null) uiSo.FindProperty("displayFont").objectReferenceValue = righteousFont;
+                if (audiowideFont != null) uiSo.FindProperty("bodyFont").objectReferenceValue = audiowideFont;
+                uiSo.ApplyModifiedProperties();
+
+                SerializedObject ftSo = new SerializedObject(ftMgr);
+                if (righteousFont != null) ftSo.FindProperty("customFont").objectReferenceValue = righteousFont;
+                ftSo.ApplyModifiedProperties();
+            }
 
             GameObject soundMgrObj = GameObject.Find("SoundManager");
             if (soundMgrObj == null) soundMgrObj = new GameObject("SoundManager");

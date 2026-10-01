@@ -320,7 +320,7 @@ TrailRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 920655523}
+  - {fileID: 856493224}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1098,6 +1098,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd008f62a10820541943b3603ef85208, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  displayFont: {fileID: 12800000, guid: 8940f42a35a76a441ac4f042221ee0d1, type: 3}
+  bodyFont: {fileID: 12800000, guid: 6e52229df1d70b14b8dcffc279669a81, type: 3}
 --- !u!114 &699405954
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1110,7 +1112,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e22f225e5b63d9e44ae940f708586e71, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!21 &920655523
+  customFont: {fileID: 12800000, guid: 8940f42a35a76a441ac4f042221ee0d1, type: 3}
+--- !u!21 &856493224
 Material:
   serializedVersion: 8
   m_ObjectHideFlags: 0

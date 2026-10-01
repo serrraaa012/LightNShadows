@@ -19,6 +19,10 @@ namespace LightNShadows
         private const float SplashDuration = 4.2f;
         private bool splashAudioTriggered = false;
 
+        [Header("Stylized Fonts")]
+        [SerializeField] private Font displayFont;
+        [SerializeField] private Font bodyFont;
+
         private GUIStyle titleStyle;
         private GUIStyle headerStyle;
         private GUIStyle cardTitleStyle;
@@ -70,10 +74,32 @@ namespace LightNShadows
         {
             if (stylesInitialized && titleStyle != null) return;
 
+            if (displayFont == null)
+            {
+                displayFont = Resources.Load<Font>("Fonts/Righteous-Regular");
+#if UNITY_EDITOR
+                if (displayFont == null) displayFont = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Righteous-Regular.ttf");
+                if (displayFont == null) displayFont = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>("Assets/Resources/Fonts/Righteous-Regular.ttf");
+#endif
+                if (displayFont == null) displayFont = Font.CreateDynamicFontFromOSFont("Impact", 24);
+                if (displayFont == null) displayFont = Font.CreateDynamicFontFromOSFont("Bahnschrift", 24);
+            }
+
+            if (bodyFont == null)
+            {
+                bodyFont = Resources.Load<Font>("Fonts/Audiowide-Regular");
+#if UNITY_EDITOR
+                if (bodyFont == null) bodyFont = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Audiowide-Regular.ttf");
+                if (bodyFont == null) bodyFont = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>("Assets/Resources/Fonts/Audiowide-Regular.ttf");
+#endif
+                if (bodyFont == null) bodyFont = displayFont;
+            }
+
             int titleSize = Mathf.Clamp((int)(Screen.width * 0.052f), 38, 64);
 
             titleStyle = new GUIStyle(GUI.skin.label)
             {
+                font = displayFont,
                 fontSize = titleSize,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
@@ -83,6 +109,7 @@ namespace LightNShadows
 
             headerStyle = new GUIStyle(GUI.skin.label)
             {
+                font = displayFont,
                 fontSize = Mathf.Clamp((int)(Screen.width * 0.038f), 28, 44),
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
@@ -92,6 +119,7 @@ namespace LightNShadows
 
             cardTitleStyle = new GUIStyle(GUI.skin.label)
             {
+                font = displayFont,
                 fontSize = 18,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft
@@ -99,6 +127,7 @@ namespace LightNShadows
 
             cardBodyStyle = new GUIStyle(GUI.skin.label)
             {
+                font = bodyFont ?? displayFont,
                 fontSize = 14,
                 fontStyle = FontStyle.Normal,
                 alignment = TextAnchor.UpperLeft,
@@ -108,6 +137,7 @@ namespace LightNShadows
 
             buttonStyle = new GUIStyle(GUI.skin.button)
             {
+                font = displayFont,
                 fontSize = 20,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
@@ -125,13 +155,15 @@ namespace LightNShadows
 
             hudStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 22,
+                font = displayFont,
+                fontSize = 24,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.UpperLeft
             };
 
             comboStyle = new GUIStyle(GUI.skin.label)
             {
+                font = displayFont,
                 fontSize = 26,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.UpperLeft

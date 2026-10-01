@@ -17,6 +17,9 @@ namespace LightNShadows
             public float velocityY;
         }
 
+        [Header("Typography")]
+        [SerializeField] private Font customFont;
+
         private List<Popup> activePopups = new List<Popup>();
         private GUIStyle popupStyle;
 
@@ -60,9 +63,17 @@ namespace LightNShadows
 
             if (popupStyle == null)
             {
+                Font font = customFont ?? Resources.Load<Font>("Fonts/Righteous-Regular");
+#if UNITY_EDITOR
+                if (font == null) font = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Righteous-Regular.ttf");
+                if (font == null) font = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>("Assets/Resources/Fonts/Righteous-Regular.ttf");
+#endif
+                if (font == null) font = Font.CreateDynamicFontFromOSFont("Impact", 24);
+
                 popupStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 22,
+                    font = font,
+                    fontSize = 24,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter
                 };
@@ -77,10 +88,18 @@ namespace LightNShadows
                 float t = p.timer / p.duration;
                 Color c = p.color;
                 c.a = Mathf.Clamp01(1f - t * t);
-                popupStyle.normal.textColor = c;
 
                 float y = Screen.height - screenPos.y;
-                GUI.Label(new Rect(screenPos.x - 100, y - 20, 200, 40), p.text, popupStyle);
+                Rect textRect = new Rect(screenPos.x - 100, y - 20, 200, 40);
+
+                // Crisp drop shadow for popups
+                Color shadowCol = new Color(0.02f, 0.03f, 0.06f, c.a * 0.95f);
+                popupStyle.normal.textColor = shadowCol;
+                GUI.Label(new Rect(textRect.x + 1.5f, textRect.y + 1.5f, textRect.width, textRect.height), p.text, popupStyle);
+
+                // Foreground text
+                popupStyle.normal.textColor = c;
+                GUI.Label(textRect, p.text, popupStyle);
             }
         }
     }
