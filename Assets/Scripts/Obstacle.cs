@@ -35,6 +35,8 @@ namespace LightNShadows
         private float currentSpeed;
         private float animTimer = 0f;
         private Vector3 initialPosition;
+        private Transform playerTrans;
+        private bool hasScored = false;
 
         private void Awake()
         {
@@ -56,6 +58,9 @@ namespace LightNShadows
         private void Start()
         {
             initialPosition = transform.position;
+            GameObject playerObj = GameObject.Find("Player");
+            if (playerObj != null) playerTrans = playerObj.transform;
+
             if (DimensionManager.Instance != null)
             {
                 UpdateVisualState(DimensionManager.Instance.CurrentDimension);
@@ -96,6 +101,32 @@ namespace LightNShadows
                 transform.localScale = new Vector3(pulse * 0.9f, transform.localScale.y, 1f);
             }
 
+            // Award score when player successfully clears / passes the obstacle
+            if (!hasScored && GameManager.Instance != null && GameManager.Instance.IsPlaying)
+            {
+                if (playerTrans == null)
+                {
+                    GameObject p = GameObject.Find("Player");
+                    if (p != null) playerTrans = p.transform;
+                }
+
+                if (playerTrans != null && playerTrans.gameObject.activeInHierarchy)
+                {
+                    // Trigger once obstacle moves safely behind the player
+                    if (transform.position.x < playerTrans.position.x - 0.5f)
+                    {
+                        hasScored = true;
+                        GameManager.Instance.AddScore(100);
+
+                        if (FloatingTextManager.Instance != null)
+                        {
+                            Vector3 popupPos = new Vector3(playerTrans.position.x + 0.3f, playerTrans.position.y + 1.2f, 0f);
+                            FloatingTextManager.Instance.SpawnPopup(popupPos, "+100", new Color(1f, 0.9f, 0.25f));
+                        }
+                    }
+                }
+            }
+
             // Recycle off-screen
             if (transform.position.x < offscreenX)
             {
@@ -134,6 +165,8 @@ namespace LightNShadows
 
         public void OnPlayerPhasedThrough()
         {
+            hasScored = true; // Mark as scored so passing behind player doesn't double-award
+
             if (spriteRenderer != null && dimension != DimensionType.Neutral)
             {
                 Color c = spriteRenderer.color;

@@ -82,14 +82,7 @@ namespace LightNShadows
                 return;
             }
 
-            // Passive time score in game
-            scoreAccumulator += scorePerSecond * Time.deltaTime;
-            if (scoreAccumulator >= 1f)
-            {
-                int pointsToAdd = Mathf.FloorToInt(scoreAccumulator);
-                scoreAccumulator -= pointsToAdd;
-                AddScore(pointsToAdd);
-            }
+            // Score increases strictly when passing obstacles or collecting items
         }
 
         public void StartGame()

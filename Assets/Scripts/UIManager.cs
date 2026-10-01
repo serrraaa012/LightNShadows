@@ -419,50 +419,35 @@ namespace LightNShadows
             if (GameManager.Instance == null) return;
 
             bool isLight = DimensionManager.Instance != null && DimensionManager.Instance.CurrentDimension == DimensionType.Light;
-            Color primaryCol = Color.white;
 
-            // Left Score Backing Card
-            Rect scoreCard = new Rect(25, 18, 220, 75);
-            GUI.color = new Color(0.04f, 0.06f, 0.12f, 0.72f);
-            GUI.DrawTexture(scoreCard, Texture2D.whiteTexture);
-            GUI.color = new Color(0.3f, 0.8f, 1f, 0.35f);
-            DrawBorder(scoreCard, 1f);
-            GUI.color = Color.white;
+            // Clean floating score display with high-contrast drop-shadows (no box/background)
+            float scoreX = 28f;
+            float scoreY = 22f;
 
+            // 1. SCORE
+            hudStyle.normal.textColor = new Color(0.02f, 0.03f, 0.06f, 0.95f);
+            GUI.Label(new Rect(scoreX + 2, scoreY + 2, 300, 35), $"SCORE: {GameManager.Instance.CurrentScore:N0}", hudStyle);
             hudStyle.normal.textColor = Color.white;
-            GUI.Label(new Rect(38, 24, 200, 35), $"SCORE: {GameManager.Instance.CurrentScore:N0}", hudStyle);
+            GUI.Label(new Rect(scoreX, scoreY, 300, 35), $"SCORE: {GameManager.Instance.CurrentScore:N0}", hudStyle);
 
-            GUIStyle subHud = new GUIStyle(hudStyle) { fontSize = 15 };
-            subHud.normal.textColor = new Color(0.85f, 0.9f, 1f, 0.8f);
-            GUI.Label(new Rect(38, 58, 200, 25), $"BEST:  {GameManager.Instance.HighScore:N0}", subHud);
+            // 2. BEST SCORE
+            GUIStyle subHud = new GUIStyle(hudStyle) { fontSize = 16 };
+            subHud.normal.textColor = new Color(0.02f, 0.03f, 0.06f, 0.95f);
+            GUI.Label(new Rect(scoreX + 2, scoreY + 36, 300, 26), $"BEST:  {GameManager.Instance.HighScore:N0}", subHud);
+            subHud.normal.textColor = new Color(1f, 0.88f, 0.35f, 0.95f);
+            GUI.Label(new Rect(scoreX, scoreY + 34, 300, 26), $"BEST:  {GameManager.Instance.HighScore:N0}", subHud);
 
-            // Combo Streak
+            // 3. COMBO STREAK (Floating with drop-shadow, no black background)
             if (GameManager.Instance.ComboCount > 1)
             {
-                Rect comboCard = new Rect(25, 98, 220, 36);
-                GUI.color = new Color(0.04f, 0.06f, 0.12f, 0.75f);
-                GUI.DrawTexture(comboCard, Texture2D.whiteTexture);
-                GUI.color = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
-                DrawBorder(comboCard, 1.5f);
-                GUI.color = Color.white;
+                float comboY = scoreY + 66f;
+                Color comboColor = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
 
-                comboStyle.normal.textColor = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
-                GUI.Label(new Rect(38, 102, 200, 30), $"★ COMBO x{GameManager.Instance.ComboCount}!", comboStyle);
+                comboStyle.normal.textColor = new Color(0.02f, 0.03f, 0.06f, 0.95f);
+                GUI.Label(new Rect(scoreX + 2, comboY + 2, 300, 30), $"★ COMBO x{GameManager.Instance.ComboCount}!", comboStyle);
+                comboStyle.normal.textColor = comboColor;
+                GUI.Label(new Rect(scoreX, comboY, 300, 30), $"★ COMBO x{GameManager.Instance.ComboCount}!", comboStyle);
             }
-
-            // Top-Right Active Realm Indicator
-            Rect realmCard = new Rect(Screen.width - 255, 18, 230, 42);
-            GUI.color = new Color(0.04f, 0.06f, 0.12f, 0.72f);
-            GUI.DrawTexture(realmCard, Texture2D.whiteTexture);
-            Color realmCol = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
-            GUI.color = realmCol;
-            DrawBorder(realmCard, 1.5f);
-            GUI.color = Color.white;
-
-            string realmText = isLight ? "REALM // LIGHT  ☀" : "REALM // SHADOW  🌙";
-            GUIStyle rightStyle = new GUIStyle(hudStyle) { alignment = TextAnchor.MiddleCenter, fontSize = 17 };
-            rightStyle.normal.textColor = realmCol;
-            GUI.Label(realmCard, realmText, rightStyle);
         }
 
         // ==========================================
