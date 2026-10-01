@@ -6,13 +6,15 @@ namespace LightNShadows
     {
         public static UIManager Instance { get; private set; }
 
+        private Texture2D bgTex;
+        private Texture2D titleLogoTex;
+        private Texture2D panelTex;
         private Texture2D buttonTex;
         private Texture2D buttonHoverTex;
         private Texture2D iconJumpTex;
         private Texture2D iconPhaseTex;
 
         private GUIStyle titleStyle;
-        private GUIStyle subtitleStyle;
         private GUIStyle headerStyle;
         private GUIStyle cardTitleStyle;
         private GUIStyle cardBodyStyle;
@@ -30,59 +32,69 @@ namespace LightNShadows
 
         private void LoadTextures()
         {
-            buttonTex = LoadFromPath("Assets/Sprites/UIButton.png");
-            buttonHoverTex = LoadFromPath("Assets/Sprites/UIButtonHover.png");
-            iconJumpTex = LoadFromPath("Assets/Sprites/IconJump.png");
-            iconPhaseTex = LoadFromPath("Assets/Sprites/IconPhase.png");
+            bgTex = LoadTexture("Assets/Sprites/GameBackground.jpg");
+            titleLogoTex = LoadTexture("Assets/Sprites/TitleLogo.jpg");
+            panelTex = LoadTexture("Assets/Sprites/UIPanel.png");
+            buttonTex = LoadTexture("Assets/Sprites/UIButton.png");
+            buttonHoverTex = LoadTexture("Assets/Sprites/UIButtonHover.png");
+            iconJumpTex = LoadTexture("Assets/Sprites/IconJump.png");
+            iconPhaseTex = LoadTexture("Assets/Sprites/IconPhase.png");
         }
 
-        private Texture2D LoadFromPath(string path)
+        private Texture2D LoadTexture(string assetPath)
         {
 #if UNITY_EDITOR
-            return UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-#else
-            return null;
+            Texture2D tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+            if (tex != null) return tex;
 #endif
+            string fullPath = System.IO.Path.Combine(Application.dataPath, assetPath.Replace("Assets/", ""));
+            if (System.IO.File.Exists(fullPath))
+            {
+                byte[] bytes = System.IO.File.ReadAllBytes(fullPath);
+                Texture2D loaded = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (loaded.LoadImage(bytes))
+                {
+                    loaded.wrapMode = TextureWrapMode.Clamp;
+                    return loaded;
+                }
+            }
+            return null;
         }
 
         private void InitStyles()
         {
             if (stylesInitialized && titleStyle != null) return;
 
+            int titleSize = Mathf.Clamp((int)(Screen.width * 0.052f), 38, 64);
+
             titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 54,
+                fontSize = titleSize,
                 fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = false
             };
             titleStyle.normal.textColor = Color.white;
 
-            subtitleStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 18,
-                fontStyle = FontStyle.Normal,
-                alignment = TextAnchor.MiddleCenter
-            };
-            subtitleStyle.normal.textColor = new Color(0.7f, 0.85f, 1f);
-
             headerStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 32,
+                fontSize = Mathf.Clamp((int)(Screen.width * 0.038f), 28, 44),
                 fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = false
             };
             headerStyle.normal.textColor = Color.white;
 
             cardTitleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 20,
+                fontSize = 18,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft
             };
 
             cardBodyStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 15,
+                fontSize = 14,
                 fontStyle = FontStyle.Normal,
                 alignment = TextAnchor.UpperLeft,
                 wordWrap = true
@@ -91,12 +103,13 @@ namespace LightNShadows
 
             buttonStyle = new GUIStyle(GUI.skin.button)
             {
-                fontSize = 21,
+                fontSize = 20,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
             buttonStyle.normal.textColor = Color.white;
-            buttonStyle.hover.textColor = new Color(0.1f, 0.95f, 1.4f);
+            buttonStyle.hover.textColor = new Color(0.2f, 1f, 1.4f);
+            buttonStyle.active.textColor = new Color(1.3f, 0.9f, 0.3f);
 
             if (buttonTex != null)
             {
@@ -131,125 +144,156 @@ namespace LightNShadows
             switch (state)
             {
                 case GameManager.GameState.Title:
-                    DrawFullMenu();
+                    DrawStartMenu();
                     break;
                 case GameManager.GameState.Instructions:
-                    DrawFullInstructions();
+                    DrawInstructionsMenu();
                     break;
                 case GameManager.GameState.Playing:
                     DrawHUD();
                     break;
                 case GameManager.GameState.GameOver:
-                    DrawFullGameOver();
+                    DrawGameOverMenu();
                     break;
             }
         }
 
         // ==========================================
-        // 1. FULL-SCREEN IMMERSIVE START MENU
+        // 1. IMMERSIVE FULL-SCREEN START MENU
         // ==========================================
-        private void DrawFullMenu()
+        private void DrawStartMenu()
         {
-            // Full-screen backdrop overlay
-            DrawFullScreenBackdrop();
+            // Fullscreen Celestial Eclipse Artwork
+            DrawFullScreenBackdrop(new Color(0.02f, 0.03f, 0.06f, 0.40f));
 
             float midX = Screen.width * 0.5f;
             float midY = Screen.height * 0.5f;
 
-            // Header Banner Line
-            DrawNeonLine(new Rect(midX - 250, midY - 170, 500, 2), new Color(0.15f, 0.85f, 1.2f));
+            // 1. Render Graphic Title Logo
+            if (titleLogoTex != null)
+            {
+                float logoW = Mathf.Clamp(Screen.width * 0.50f, 420f, 600f);
+                float logoH = logoW / 1.7916f; // 16:9 ratio
+                float logoX = midX - logoW * 0.5f;
+                float logoY = midY - logoH - 15f;
 
-            // Title with dramatic neon drop-shadow
-            DrawTextWithShadow(new Rect(0, midY - 150, Screen.width, 65), "LIGHT   N   SHADOWS", titleStyle, new Color(0.2f, 0.9f, 1.4f));
+                GUI.DrawTexture(new Rect(logoX, logoY, logoW, logoH), titleLogoTex, ScaleMode.ScaleToFit, true);
+            }
+            else
+            {
+                // Fallback styled text title
+                float titleY = midY - 110f;
+                Rect titleRect = new Rect(0, titleY, Screen.width, 70);
 
-            // Subtitle
-            GUI.Label(new Rect(0, midY - 80, Screen.width, 30), "// DUAL-SPECTRUM RHYTHM RUNNER //", subtitleStyle);
+                titleStyle.normal.textColor = new Color(0.02f, 0.03f, 0.08f, 0.95f);
+                GUI.Label(new Rect(2, titleY + 3, Screen.width, 70), "LIGHT   N   SHADOWS", titleStyle);
 
-            // Record Badge
+                titleStyle.normal.textColor = new Color(0.2f, 0.9f, 1.4f, 0.6f);
+                GUI.Label(new Rect(-1, titleY - 1, Screen.width, 70), "LIGHT   N   SHADOWS", titleStyle);
+
+                titleStyle.normal.textColor = Color.white;
+                GUI.Label(titleRect, "LIGHT   N   SHADOWS", titleStyle);
+            }
+
+            // 2. High Score Ribbon Badge
             int best = (GameManager.Instance != null) ? GameManager.Instance.HighScore : 0;
-            GUIStyle badge = new GUIStyle(subtitleStyle) { fontSize = 18, fontStyle = FontStyle.Bold };
-            badge.normal.textColor = new Color(1.2f, 0.85f, 0.2f); // Solar Gold
-            GUI.Label(new Rect(0, midY - 35, Screen.width, 30), $"RECORD: {best:N0} PTS", badge);
+            float badgeW = 280f;
+            float badgeH = 36f;
+            float badgeY = midY + 30f;
+            Rect badgeRect = new Rect(midX - badgeW * 0.5f, badgeY, badgeW, badgeH);
 
-            // Interactive Buttons
-            float btnW = 340f;
-            float btnH = 58f;
+            GUI.color = new Color(0.06f, 0.08f, 0.14f, 0.92f);
+            GUI.DrawTexture(badgeRect, Texture2D.whiteTexture);
+            GUI.color = new Color(1.3f, 0.88f, 0.25f, 0.85f); // Solar Gold Rim
+            DrawBorder(badgeRect, 1.5f);
+            GUI.color = Color.white;
+
+            GUIStyle badgeStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 15,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+            badgeStyle.normal.textColor = new Color(1.3f, 0.88f, 0.25f);
+            GUI.Label(badgeRect, $"★  RECORD: {best:N0} PTS  ★", badgeStyle);
+
+            // 3. Action Buttons (Clean, responsive pill buttons)
+            float btnW = 290f;
+            float btnH = 54f;
             float btnX = midX - btnW * 0.5f;
 
-            if (GUI.Button(new Rect(btnX, midY + 25, btnW, btnH), "PLAY", buttonStyle))
+            if (GUI.Button(new Rect(btnX, badgeY + 54f, btnW, btnH), "PLAY", buttonStyle))
             {
                 GameManager.Instance.StartGame();
             }
 
-            if (GUI.Button(new Rect(btnX, midY + 100, btnW, btnH), "HOW TO PLAY", buttonStyle))
+            if (GUI.Button(new Rect(btnX, badgeY + 120f, btnW, btnH), "HOW TO PLAY", buttonStyle))
             {
                 GameManager.Instance.OpenInstructions();
             }
-
-            // Footer Banner Line
-            DrawNeonLine(new Rect(midX - 250, midY + 185, 500, 2), new Color(0.15f, 0.85f, 1.2f, 0.5f));
-
-            // Controls Hint
-            GUIStyle hint = new GUIStyle(subtitleStyle) { fontSize = 15 };
-            hint.normal.textColor = new Color(0.6f, 0.7f, 0.85f);
-            GUI.Label(new Rect(0, midY + 200, Screen.width, 30), "W / UP = Jump   |   SPACE / CLICK = Swap Dimension", hint);
         }
 
         // ==========================================
-        // 2. FULL-SCREEN INSTRUCTIONS (HOW TO PLAY)
+        // 2. INSTRUCTIONS SCREEN (HOW TO PLAY)
         // ==========================================
-        private void DrawFullInstructions()
+        private void DrawInstructionsMenu()
         {
-            DrawFullScreenBackdrop();
+            DrawFullScreenBackdrop(new Color(0.02f, 0.03f, 0.06f, 0.78f));
 
             float midX = Screen.width * 0.5f;
+            float midY = Screen.height * 0.5f;
+
+            float cardW = Mathf.Min(760f, Screen.width * 0.94f);
+            float cardH = Mathf.Min(520f, Screen.height * 0.90f);
+            Rect panelRect = new Rect(midX - cardW * 0.5f, midY - cardH * 0.5f, cardW, cardH);
+
+            DrawGlassPanel(panelRect);
 
             // Header
-            DrawNeonLine(new Rect(midX - 320, 45, 640, 2), new Color(0.2f, 0.9f, 1.4f));
-            DrawTextWithShadow(new Rect(0, 60, Screen.width, 45), "// MISSION DIRECTIVES //", headerStyle, new Color(0.2f, 0.9f, 1.4f));
-            GUI.Label(new Rect(0, 110, Screen.width, 25), "Two simple rules to master the spectrum.", subtitleStyle);
+            headerStyle.normal.textColor = Color.white;
+            GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 38), "HOW TO PLAY", headerStyle);
 
-            float cardW = Mathf.Min(780f, Screen.width * 0.92f);
-            float cardX = (Screen.width - cardW) * 0.5f;
-            float startY = 155f;
+            float startY = panelRect.y + 75f;
+            float subW = panelRect.width - 50f;
+            float subX = panelRect.x + 25f;
 
-            // CARD 1: CRIMSON SPIKES (MUST JUMP)
+            // 1. CRIMSON SPIKES
             DrawDirectiveCard(
-                new Rect(cardX, startY, cardW, 85),
+                new Rect(subX, startY, subW, 80),
                 iconJumpTex,
-                new Color(1.4f, 0.25f, 0.35f), // Crimson Neon
-                "1. CRIMSON SPIKES // MUST JUMP",
-                "Red spikes are SOLID in both Light and Shadow realms. You CANNOT phase through them!\n" +
-                "ACTION: Press [ W ] or [ UP ARROW ] to leap over them.",
-                "[ W / UP ]"
+                new Color(1.5f, 0.2f, 0.32f),
+                "CRIMSON SPIKES  —  MUST JUMP",
+                "Red spikes are SOLID hazards in both Light and Shadow worlds. Phasing cannot bypass them!\n" +
+                "Action: Press [ W ] or [ UP ARROW ] to jump over.",
+                "JUMP"
             );
 
-            // CARD 2: REALM GATES (MUST PHASE)
+            // 2. REALM GATES
             DrawDirectiveCard(
-                new Rect(cardX, startY + 105, cardW, 85),
+                new Rect(subX, startY + 95, subW, 80),
                 iconPhaseTex,
-                new Color(0.2f, 0.95f, 1.4f), // Neon Cyan
-                "2. TALL GATES // MUST PHASE",
-                "Massive 3.8m energy barriers are too high to jump. Shift to the OPPOSITE realm to phase through safely!\n" +
-                "ACTION: Press [ SPACEBAR ] or [ CLICK ] to shift dimension.",
-                "[ SPACE ]"
+                new Color(0.2f, 0.95f, 1.4f),
+                "TALL GATES  —  MUST PHASE",
+                "Imposing energy gates cannot be jumped. Shift into the OPPOSITE realm to ghost through safely!\n" +
+                "Action: Press [ SPACEBAR ] or [ CLICK ] to swap realms.",
+                "PHASE"
             );
 
-            // CARD 3: COMBOS (SCORE BOOST)
+            // 3. COMBOS & ORBS
             DrawDirectiveCard(
-                new Rect(cardX, startY + 210, cardW, 85),
+                new Rect(subX, startY + 190, subW, 80),
                 null,
-                new Color(1.3f, 0.85f, 0.2f), // Solar Amber
-                "3. RHYTHM COMBOS // MULTIPLIERS",
-                "Every consecutive gate you ghost through builds your COMBO multiplier up to x5!\n" +
-                "TIP: Stay focused during rapid Jump-then-Phase combo sequences.",
-                "[ x5 MAX ]"
+                new Color(1.3f, 0.85f, 0.2f),
+                "COMBOS & PRISM GEMS  —  SCORE BOOST",
+                "Consecutive phase passes increase your COMBO multiplier up to x5!\n" +
+                "Collect floating diamond Prism Orbs along the track for +100 bonus points.",
+                "x5 BOOST"
             );
 
-            // Action Buttons
-            float btnW = 260f;
-            float btnH = 52f;
-            float bY = startY + 325f;
+            // Buttons
+            float btnW = 200f;
+            float btnH = 50f;
+            float bY = panelRect.y + panelRect.height - 70f;
 
             if (GUI.Button(new Rect(midX - btnW - 15, bY, btnW, btnH), "PLAY", buttonStyle))
             {
@@ -262,43 +306,38 @@ namespace LightNShadows
             }
         }
 
-        private void DrawDirectiveCard(Rect r, Texture2D icon, Color accent, string title, string body, string keyTag)
+        private void DrawDirectiveCard(Rect r, Texture2D icon, Color accent, string title, string body, string tag)
         {
-            // Card background box
-            GUI.color = new Color(0.08f, 0.1f, 0.16f, 0.92f);
+            GUI.color = new Color(0.08f, 0.10f, 0.16f, 0.92f);
             GUI.DrawTexture(r, Texture2D.whiteTexture);
 
-            // Left accent border strip
+            // Accent left bar
             GUI.color = accent;
-            GUI.DrawTexture(new Rect(r.x, r.y, 5, r.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x, r.y, 4, r.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            float textLeft = r.x + 20;
-
+            float textLeft = r.x + 18;
             if (icon != null)
             {
                 GUI.color = accent;
-                GUI.DrawTexture(new Rect(r.x + 18, r.y + 18, 48, 48), icon);
+                GUI.DrawTexture(new Rect(r.x + 14, r.y + 18, 44, 44), icon);
                 GUI.color = Color.white;
-                textLeft = r.x + 80;
+                textLeft = r.x + 72;
             }
 
-            // Title
             cardTitleStyle.normal.textColor = accent;
-            GUI.Label(new Rect(textLeft, r.y + 12, r.width - textLeft - 110, 25), title, cardTitleStyle);
+            GUI.Label(new Rect(textLeft, r.y + 10, r.width - textLeft - 95, 24), title, cardTitleStyle);
 
-            // Body
-            GUI.Label(new Rect(textLeft, r.y + 38, r.width - textLeft - 110, 42), body, cardBodyStyle);
+            GUI.Label(new Rect(textLeft, r.y + 34, r.width - textLeft - 95, 40), body, cardBodyStyle);
 
-            // Key tag on right
-            GUIStyle tagStyle = new GUIStyle(cardTitleStyle) { alignment = TextAnchor.MiddleCenter, fontSize = 16 };
+            GUIStyle tagStyle = new GUIStyle(cardTitleStyle) { alignment = TextAnchor.MiddleCenter, fontSize = 13 };
             tagStyle.normal.textColor = Color.white;
 
-            GUI.color = new Color(accent.r * 0.3f, accent.g * 0.3f, accent.b * 0.3f, 0.9f);
-            GUI.DrawTexture(new Rect(r.x + r.width - 105, r.y + 24, 90, 36), Texture2D.whiteTexture);
+            GUI.color = new Color(accent.r * 0.35f, accent.g * 0.35f, accent.b * 0.35f, 0.9f);
+            GUI.DrawTexture(new Rect(r.x + r.width - 92, r.y + 24, 80, 32), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            GUI.Label(new Rect(r.x + r.width - 105, r.y + 24, 90, 36), keyTag, tagStyle);
+            GUI.Label(new Rect(r.x + r.width - 92, r.y + 24, 80, 32), tag, tagStyle);
         }
 
         // ==========================================
@@ -316,7 +355,7 @@ namespace LightNShadows
             GUI.Label(new Rect(35, 25, 300, 35), $"SCORE: {GameManager.Instance.CurrentScore:N0}", hudStyle);
 
             GUIStyle subHud = new GUIStyle(hudStyle) { fontSize = 16 };
-            subHud.normal.textColor = new Color(primaryCol.r, primaryCol.g, primaryCol.b, 0.75f);
+            subHud.normal.textColor = new Color(primaryCol.r, primaryCol.g, primaryCol.b, 0.7f);
             GUI.Label(new Rect(35, 60, 300, 25), $"BEST:  {GameManager.Instance.HighScore:N0}", subHud);
 
             // Combo Streak
@@ -327,110 +366,145 @@ namespace LightNShadows
             }
 
             // Top-Right Active Realm Indicator
-            string realmText = isLight ? "REALM // SOLAR LIGHT" : "REALM // ELECTRIC VOID";
+            string realmText = isLight ? "REALM // SOLAR LIGHT" : "REALM // SHADOW VOID";
             GUIStyle rightStyle = new GUIStyle(hudStyle) { alignment = TextAnchor.UpperRight };
             rightStyle.normal.textColor = isLight ? new Color(0.85f, 0.45f, 0.05f) : new Color(0.2f, 0.95f, 1.4f);
             GUI.Label(new Rect(Screen.width - 370, 25, 335, 35), realmText, rightStyle);
         }
 
         // ==========================================
-        // 4. FULL-SCREEN GAME OVER (RUN TERMINATED)
+        // 4. OVERHAULED GAME OVER SCREEN
         // ==========================================
-        private void DrawFullGameOver()
+        private void DrawGameOverMenu()
         {
             if (GameManager.Instance == null) return;
 
-            DrawFullScreenBackdrop();
+            // Fullscreen Celestial Background with Dramatic Crimson Vignette
+            DrawFullScreenBackdrop(new Color(0.12f, 0.02f, 0.04f, 0.80f));
 
             float midX = Screen.width * 0.5f;
             float midY = Screen.height * 0.5f;
 
-            // Crimson top accent
-            DrawNeonLine(new Rect(midX - 260, midY - 180, 520, 2), new Color(1.4f, 0.25f, 0.35f));
+            float cardW = Mathf.Min(540f, Screen.width * 0.88f);
+            float cardH = Mathf.Min(430f, Screen.height * 0.85f);
+            Rect panelRect = new Rect(midX - cardW * 0.5f, midY - cardH * 0.5f, cardW, cardH);
 
-            // Title
-            GUIStyle overTitle = new GUIStyle(titleStyle) { fontSize = 50 };
-            overTitle.normal.textColor = new Color(1.4f, 0.25f, 0.35f);
-            DrawTextWithShadow(new Rect(0, midY - 165, Screen.width, 60), "RUN TERMINATED", overTitle, new Color(1f, 0.1f, 0.2f, 0.6f));
+            DrawGlassPanel(panelRect);
 
-            // Record celebration
+            // 1. BOLD "GAME OVER" (Neon Crimson Red with shadow)
+            GUIStyle overTitle = new GUIStyle(headerStyle) { fontSize = 48 };
+            overTitle.normal.textColor = new Color(0.05f, 0.01f, 0.02f, 0.9f);
+            GUI.Label(new Rect(panelRect.x + 2, panelRect.y + 34, panelRect.width, 55), "GAME OVER", overTitle);
+
+            overTitle.normal.textColor = new Color(1.5f, 0.2f, 0.32f); // Luminous Crimson
+            GUI.Label(new Rect(panelRect.x, panelRect.y + 32, panelRect.width, 55), "GAME OVER", overTitle);
+
+            // 2. High Score Celebration or Divider
             if (GameManager.Instance.IsNewHighScore)
             {
-                GUIStyle recordStyle = new GUIStyle(subtitleStyle) { fontSize = 20, fontStyle = FontStyle.Bold };
-                recordStyle.normal.textColor = new Color(1.3f, 0.85f, 0.2f);
-                GUI.Label(new Rect(0, midY - 100, Screen.width, 30), "★ NEW PERSONAL RECORD! ★", recordStyle);
+                GUIStyle recordStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 17,
+                    fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleCenter
+                };
+                recordStyle.normal.textColor = new Color(1.3f, 0.88f, 0.25f); // Solar Gold
+                GUI.Label(new Rect(panelRect.x, panelRect.y + 92, panelRect.width, 28), "★ NEW RECORD! ★", recordStyle);
             }
             else
             {
-                GUI.Label(new Rect(0, midY - 100, Screen.width, 30), "// SYSTEM CORE SHATTERED //", subtitleStyle);
+                GUI.color = new Color(0.25f, 0.8f, 1.1f, 0.35f);
+                GUI.DrawTexture(new Rect(panelRect.x + 80, panelRect.y + 96, panelRect.width - 160, 1), Texture2D.whiteTexture);
+                GUI.color = Color.white;
             }
 
-            // Score Card Box
-            float cardW = 420f;
-            float cardH = 120f;
-            Rect scoreCard = new Rect(midX - cardW * 0.5f, midY - 55, cardW, cardH);
+            // 3. Stats Box
+            float boxW = panelRect.width - 70f;
+            float boxH = 105f;
+            Rect boxRect = new Rect(panelRect.x + 35f, panelRect.y + 120f, boxW, boxH);
 
-            GUI.color = new Color(0.08f, 0.1f, 0.16f, 0.92f);
-            GUI.DrawTexture(scoreCard, Texture2D.whiteTexture);
+            GUI.color = new Color(0.08f, 0.10f, 0.16f, 0.95f);
+            GUI.DrawTexture(boxRect, Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            GUIStyle scoreValStyle = new GUIStyle(titleStyle) { fontSize = 34 };
+            GUIStyle scoreValStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 32,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
             scoreValStyle.normal.textColor = Color.white;
-            GUI.Label(new Rect(scoreCard.x, scoreCard.y + 15, cardW, 40), $"{GameManager.Instance.CurrentScore:N0} PTS", scoreValStyle);
+            GUI.Label(new Rect(boxRect.x, boxRect.y + 14, boxRect.width, 40), $"{GameManager.Instance.CurrentScore:N0} PTS", scoreValStyle);
 
-            GUIStyle statLine = new GUIStyle(subtitleStyle) { fontSize = 16 };
+            GUIStyle statLine = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 15,
+                fontStyle = FontStyle.Normal,
+                alignment = TextAnchor.MiddleCenter
+            };
             statLine.normal.textColor = new Color(0.7f, 0.8f, 0.95f);
-            string comboStat = (GameManager.Instance.MaxCombo > 1) ? $" | MAX COMBO: x{GameManager.Instance.MaxCombo}" : "";
-            GUI.Label(new Rect(scoreCard.x, scoreCard.y + 65, cardW, 30), $"RECORD: {GameManager.Instance.HighScore:N0} PTS{comboStat}", statLine);
+            string comboStat = (GameManager.Instance.MaxCombo > 1) ? $"   |   MAX COMBO: x{GameManager.Instance.MaxCombo}" : "";
+            GUI.Label(new Rect(boxRect.x, boxRect.y + 60, boxRect.width, 28), $"BEST: {GameManager.Instance.HighScore:N0} PTS{comboStat}", statLine);
 
-            // Buttons
-            float btnW = 320f;
-            float btnH = 54f;
+            // 4. Action Buttons
+            float btnW = 280f;
+            float btnH = 50f;
             float btnX = midX - btnW * 0.5f;
 
-            if (GUI.Button(new Rect(btnX, midY + 95, btnW, btnH), "PLAY AGAIN", buttonStyle))
+            if (GUI.Button(new Rect(btnX, panelRect.y + 250, btnW, btnH), "PLAY AGAIN", buttonStyle))
             {
                 GameManager.Instance.RestartGame();
             }
 
-            if (GUI.Button(new Rect(btnX, midY + 165, btnW, btnH), "MAIN MENU", buttonStyle))
+            if (GUI.Button(new Rect(btnX, panelRect.y + 318, btnW, btnH), "MAIN MENU", buttonStyle))
             {
                 GameManager.Instance.OpenMainMenu();
             }
         }
 
         // ==========================================
-        // GRAPHICS HELPERS
+        // HELPERS
         // ==========================================
-        private void DrawFullScreenBackdrop()
+        private void DrawFullScreenBackdrop(Color scrimColor)
         {
-            // Dark immersive cosmic background covering the ENTIRE viewport
-            GUI.color = new Color(0.04f, 0.05f, 0.09f, 0.96f);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+            Rect screenRect = new Rect(0, 0, Screen.width, Screen.height);
+            if (bgTex != null)
+            {
+                GUI.color = Color.white;
+                GUI.DrawTexture(screenRect, bgTex, ScaleMode.ScaleAndCrop);
+            }
+            else
+            {
+                GUI.color = new Color(0.04f, 0.05f, 0.09f, 1f);
+                GUI.DrawTexture(screenRect, Texture2D.whiteTexture);
+            }
+
+            // Scrim overlay for contrast and legibility
+            GUI.color = scrimColor;
+            GUI.DrawTexture(screenRect, Texture2D.whiteTexture);
             GUI.color = Color.white;
         }
 
-        private void DrawNeonLine(Rect r, Color c)
+        private void DrawGlassPanel(Rect rect)
         {
-            GUI.color = c;
-            GUI.DrawTexture(r, Texture2D.whiteTexture);
-            GUI.color = Color.white;
+            if (panelTex != null)
+            {
+                GUI.DrawTexture(rect, panelTex);
+            }
+            else
+            {
+                GUI.color = new Color(0.05f, 0.06f, 0.11f, 0.95f);
+                GUI.DrawTexture(rect, Texture2D.whiteTexture);
+                GUI.color = Color.white;
+            }
         }
 
-        private void DrawTextWithShadow(Rect r, string text, GUIStyle style, Color glowColor)
+        private void DrawBorder(Rect r, float thickness)
         {
-            Color origColor = style.normal.textColor;
-
-            // Glow / Shadow behind
-            style.normal.textColor = glowColor;
-            GUI.Label(new Rect(r.x, r.y + 3, r.width, r.height), text, style);
-            GUI.Label(new Rect(r.x + 2, r.y, r.width, r.height), text, style);
-
-            // Crisp front text
-            style.normal.textColor = Color.white;
-            GUI.Label(r, text, style);
-
-            style.normal.textColor = origColor;
+            GUI.DrawTexture(new Rect(r.x, r.y, r.width, thickness), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x, r.y + r.height - thickness, r.width, thickness), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x, r.y, thickness, r.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(r.x + r.width - thickness, r.y, thickness, r.height), Texture2D.whiteTexture);
         }
     }
 }

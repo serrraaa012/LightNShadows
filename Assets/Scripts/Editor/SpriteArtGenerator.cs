@@ -8,6 +8,7 @@ namespace LightNShadows.Editor
     public static class SpriteArtGenerator
     {
         private const string SpritesDir = "Assets/Sprites";
+        private const string BrainDir = @"C:\Users\sarah\.gemini\antigravity\brain\dd098baa-b450-4d87-950b-5edbdecc7adb";
 
         public static void GenerateAllSprites()
         {
@@ -16,6 +17,9 @@ namespace LightNShadows.Editor
                 Directory.CreateDirectory(SpritesDir);
                 AssetDatabase.Refresh();
             }
+
+            // Copy generated High-Resolution Master Artwork
+            ImportMasterArtwork();
 
             GenerateCrystalSpike();
             GenerateCeilingSpire();
@@ -28,19 +32,41 @@ namespace LightNShadows.Editor
             GenerateMonolith();
             GenerateShockwaveRing();
 
-            // UI Sprites
-            GenerateUIPanel();
-            GenerateUIButton(false);
-            GenerateUIButton(true);
+            // High-End Modern UI Sprites
+            GenerateButtonPill(false);
+            GenerateButtonPill(true);
+            GenerateModernGlassCard();
             GenerateIconJump();
             GenerateIconPhase();
 
             AssetDatabase.Refresh();
         }
 
+        private static void ImportMasterArtwork()
+        {
+            string bgSource = Path.Combine(BrainDir, "celestial_eclipse_bg_1790875806619.jpg");
+            string logoSource = Path.Combine(BrainDir, "game_title_logo_1790875829034.jpg");
+
+            string bgDest = $"{SpritesDir}/GameBackground.jpg";
+            string logoDest = $"{SpritesDir}/TitleLogo.jpg";
+
+            if (File.Exists(bgSource))
+            {
+                File.Copy(bgSource, bgDest, true);
+                AssetDatabase.ImportAsset(bgDest);
+                ConfigureTextureAsSprite(bgDest, 100);
+            }
+
+            if (File.Exists(logoSource))
+            {
+                File.Copy(logoSource, logoDest, true);
+                AssetDatabase.ImportAsset(logoDest);
+                ConfigureTextureAsSprite(logoDest, 100);
+            }
+        }
+
         // --- GAMEPLAY SPRITES ---
 
-        // 1. Ground Crystal Spike
         private static void GenerateCrystalSpike()
         {
             string path = $"{SpritesDir}/CrystalSpike.png";
@@ -63,7 +89,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 2. Ceiling Hanging Stalactite Spire (Downward hazard)
         private static void GenerateCeilingSpire()
         {
             string path = $"{SpritesDir}/CeilingSpire.png";
@@ -86,7 +111,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 3. Tall Laser Gate
         private static void GenerateLaserGate()
         {
             string path = $"{SpritesDir}/LaserGate.png";
@@ -115,7 +139,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 4. Floating Diamond Drone
         private static void GenerateFloatingDiamond()
         {
             string path = $"{SpritesDir}/FloatingDiamond.png";
@@ -143,7 +166,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 5. Collectible Prism Orb
         private static void GeneratePrismOrb()
         {
             string path = $"{SpritesDir}/PrismOrb.png";
@@ -154,7 +176,6 @@ namespace LightNShadows.Editor
             Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
             float radius = size * 0.4f;
 
-            // Outer octagonal diamond gem
             int sides = 8;
             Vector2[] pts = new Vector2[sides];
             for (int i = 0; i < sides; i++)
@@ -175,7 +196,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 96);
         }
 
-        // 6. Shockwave Ring (Dimension shift pulse)
         private static void GenerateShockwaveRing()
         {
             string path = $"{SpritesDir}/ShockwaveRing.png";
@@ -203,7 +223,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 7. Player Orbit Halo
         private static void GeneratePlayerHalo()
         {
             string path = $"{SpritesDir}/PlayerHalo.png";
@@ -235,7 +254,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 8. Player Core
         private static void GeneratePlayerCore()
         {
             string path = $"{SpritesDir}/PlayerCore.png";
@@ -263,7 +281,6 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // 9. Cyber Track
         private static void GenerateCyberTrack()
         {
             string path = $"{SpritesDir}/CyberTrack.png";
@@ -271,13 +288,12 @@ namespace LightNShadows.Editor
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             ClearTexture(tex);
 
-            FillRect(tex, 0, 0, w, h - 8, new Color(0.12f, 0.13f, 0.18f, 1f));
-            FillRect(tex, 0, h - 8, w, 8, Color.white);
+            FillRect(tex, 0, 0, w, h - 8, new Color(0.10f, 0.11f, 0.17f, 1f));
+            FillRect(tex, 0, h - 8, w, 8, new Color(1.3f, 0.85f, 0.2f, 1f));
 
             SaveAndImport(tex, path, 128);
         }
 
-        // 10. Monolith
         private static void GenerateMonolith()
         {
             string path = $"{SpritesDir}/Monolith.png";
@@ -293,50 +309,105 @@ namespace LightNShadows.Editor
             SaveAndImport(tex, path, 128);
         }
 
-        // --- UI SPRITES ---
+        // --- MODERN UI SPRITES ---
 
-        private static void GenerateUIPanel()
+        private static void GenerateButtonPill(bool isHover)
         {
-            string path = $"{SpritesDir}/UIPanel.png";
-            int w = 256, h = 256;
+            string path = isHover ? $"{SpritesDir}/UIButtonHover.png" : $"{SpritesDir}/UIButton.png";
+            int w = 320, h = 64;
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            ClearTexture(tex);
+            float cornerRadius = 30f;
 
-            Color bg = new Color(0.04f, 0.05f, 0.09f, 0.94f);
-            Color border = new Color(0.25f, 0.85f, 1.0f, 0.7f);
+            Color darkGlass = isHover 
+                ? new Color(0.20f, 0.25f, 0.42f, 0.96f) 
+                : new Color(0.08f, 0.10f, 0.17f, 0.94f);
+
+            Color borderGlow = isHover 
+                ? new Color(0.35f, 1.0f, 1.6f, 1f)
+                : new Color(0.25f, 0.8f, 1.1f, 0.75f);
 
             for (int y = 0; y < h; y++)
             {
                 for (int x = 0; x < w; x++)
                 {
-                    bool isBorder = (x <= 2 || x >= w - 3 || y <= 2 || y >= h - 3);
-                    tex.SetPixel(x, y, isBorder ? border : bg);
+                    float distFromEdge = GetPillDistance(x, y, w, h, cornerRadius);
+
+                    if (distFromEdge > 0f)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                    else
+                    {
+                        float d = -distFromEdge;
+                        if (d <= 2.5f)
+                        {
+                            tex.SetPixel(x, y, borderGlow);
+                        }
+                        else
+                        {
+                            float vertGrad = (float)y / h;
+                            Color fill = Color.Lerp(darkGlass * 0.9f, darkGlass * 1.15f, vertGrad);
+                            tex.SetPixel(x, y, fill);
+                        }
+                    }
                 }
             }
 
             SaveAndImport(tex, path, 128);
         }
 
-        private static void GenerateUIButton(bool isHover)
+        private static void GenerateModernGlassCard()
         {
-            string path = isHover ? $"{SpritesDir}/UIButtonHover.png" : $"{SpritesDir}/UIButton.png";
-            int w = 256, h = 64;
+            string path = $"{SpritesDir}/UIPanel.png";
+            int w = 512, h = 512;
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            ClearTexture(tex);
+            float cornerRadius = 24f;
 
-            Color baseBg = isHover ? new Color(0.15f, 0.85f, 1.0f, 0.32f) : new Color(0.06f, 0.08f, 0.14f, 0.92f);
-            Color border = isHover ? new Color(0.2f, 0.95f, 1.5f, 1f) : new Color(0.2f, 0.85f, 1.0f, 0.75f);
+            Color cardBg = new Color(0.05f, 0.06f, 0.11f, 0.95f);
+            Color border = new Color(0.25f, 0.8f, 1.1f, 0.6f);
 
             for (int y = 0; y < h; y++)
             {
                 for (int x = 0; x < w; x++)
                 {
-                    bool isBorder = (x <= 2 || x >= w - 3 || y <= 2 || y >= h - 3);
-                    tex.SetPixel(x, y, isBorder ? border : baseBg);
+                    float dist = GetBoxDistance(x, y, w, h, cornerRadius);
+                    if (dist > 0f)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                    else
+                    {
+                        float d = -dist;
+                        if (d <= 2.0f)
+                        {
+                            tex.SetPixel(x, y, border);
+                        }
+                        else
+                        {
+                            float grad = (float)y / h;
+                            Color c = Color.Lerp(cardBg * 0.9f, cardBg * 1.1f, grad);
+                            tex.SetPixel(x, y, c);
+                        }
+                    }
                 }
             }
 
             SaveAndImport(tex, path, 128);
+        }
+
+        private static float GetPillDistance(float x, float y, float w, float h, float r)
+        {
+            float cx = Mathf.Clamp(x, r, w - r);
+            float cy = h * 0.5f;
+            return Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy)) - r;
+        }
+
+        private static float GetBoxDistance(float x, float y, float w, float h, float r)
+        {
+            float dx = Mathf.Max(0f, Mathf.Max(r - x, x - (w - r)));
+            float dy = Mathf.Max(0f, Mathf.Max(r - y, y - (h - r)));
+            if (dx == 0f || dy == 0f) return -Mathf.Min(Mathf.Min(x, w - x), Mathf.Min(y, h - y));
+            return Mathf.Sqrt(dx * dx + dy * dy) - r;
         }
 
         private static void GenerateIconJump()
@@ -457,8 +528,12 @@ namespace LightNShadows.Editor
             tex.Apply();
             File.WriteAllBytes(path, tex.EncodeToPNG());
             AssetDatabase.ImportAsset(path);
+            ConfigureTextureAsSprite(path, ppu);
+        }
 
-            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        private static void ConfigureTextureAsSprite(string assetPath, int ppu)
+        {
+            TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
             if (importer != null)
             {
                 importer.textureType = TextureImporterType.Sprite;

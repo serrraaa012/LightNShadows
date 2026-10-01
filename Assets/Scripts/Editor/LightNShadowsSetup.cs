@@ -9,10 +9,28 @@ namespace LightNShadows.Editor
 {
     public static class LightNShadowsSetup
     {
+        [InitializeOnLoadMethod]
+        private static void OnEditorLoad()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                if (EditorPrefs.GetBool("LightNShadows_NeedsSetup_v6", true))
+                {
+                    EditorPrefs.SetBool("LightNShadows_NeedsSetup_v6", false);
+                    SetupSceneInternal(false);
+                }
+            };
+        }
+
         [MenuItem("Tools/LightNShadows/Auto-Setup Scene")]
         public static void SetupScene()
         {
-            // 1. Generate all custom vector sprites
+            SetupSceneInternal(true);
+        }
+
+        public static void SetupSceneInternal(bool showDialog)
+        {
+            // 1. Generate all custom vector sprites and import master artwork
             SpriteArtGenerator.GenerateAllSprites();
 
             Sprite spikeSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/CrystalSpike.png");
@@ -71,14 +89,16 @@ namespace LightNShadows.Editor
             if (soundMgrObj == null) soundMgrObj = new GameObject("SoundManager");
             if (soundMgrObj.GetComponent<SoundManager>() == null) soundMgrObj.AddComponent<SoundManager>();
 
-            // 5. Parallax Backdrop & Speed Particles
-            GameObject parallaxObj = GameObject.Find("ParallaxBackdrop");
-            if (parallaxObj == null) parallaxObj = new GameObject("ParallaxBackdrop");
-            ParallaxBackdrop pb = parallaxObj.GetComponent<ParallaxBackdrop>();
-            if (pb == null) pb = parallaxObj.AddComponent<ParallaxBackdrop>();
-            SerializedObject pbSo = new SerializedObject(pb);
-            pbSo.FindProperty("monolithSprite").objectReferenceValue = monolithSprite;
-            pbSo.ApplyModifiedProperties();
+            // 5. Cinematic Background (Master Celestial Artwork Parallax)
+            GameObject oldParallax = GameObject.Find("ParallaxBackdrop");
+            if (oldParallax != null) Object.DestroyImmediate(oldParallax);
+
+            GameObject cineBgObj = GameObject.Find("CinematicBackground");
+            if (cineBgObj == null)
+            {
+                cineBgObj = new GameObject("CinematicBackground");
+                cineBgObj.AddComponent<CinematicBackground>();
+            }
 
             GameObject bgObj = GameObject.Find("BackgroundParticles");
             if (bgObj == null) bgObj = new GameObject("BackgroundParticles");
@@ -185,8 +205,15 @@ namespace LightNShadows.Editor
             pcSo.FindProperty("lightDimensionColor").colorValue = new Color(0.08f, 0.09f, 0.14f, 1f);
             pcSo.ApplyModifiedProperties();
 
-            Debug.Log("<color=green>[LightNShadows]</color> Complete Polish & Animation Overhaul applied!");
-            EditorUtility.DisplayDialog("LightNShadows", "MASSIVE POLISH & ANIMATION OVERHAUL APPLIED!\n\n1. Player Animation: Jump Squash & Stretch physics\n2. Realm Shift: Expanding neon shockwave pulse ring\n3. Floating Popups: In-game '+100' & 'COMBO!' notifications\n4. New Hazards: Ceiling Stalactite Spires & The Squeeze Challenge\n5. Collectibles: Floating Prism Gem Orbs along the track\n6. Runway: Animated cyber track scroller\n\nPress PLAY to test!", "Let's Go!");
+            // 10. Persist Scene Changes
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+            UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+
+            Debug.Log("<color=cyan>[LightNShadows]</color> Visual Theme, Celestial Parallax Artwork, and Complete UI Overhaul successfully applied!");
+            if (showDialog)
+            {
+                EditorUtility.DisplayDialog("LightNShadows", "THEME, ARTWORK & UI OVERHAUL APPLIED!\n\n1. Celestial Eclipse Master Background applied to Gameplay & all Menus\n2. 3D Glowing Title Logo added to Start Menu\n3. Start Menu cleaned of all clutter\n4. Game Over screen redesigned with bold 'GAME OVER' title\n5. Clean, modern responsive pill buttons\n\nPress PLAY to test!", "Awesome!");
+            }
         }
 
         private static GameObject CreateOrUpdatePrefab(string path, Sprite sprite, Vector3 scale, ObstacleVisualType type)
