@@ -14,12 +14,26 @@ namespace LightNShadows.Editor
         {
             EditorApplication.delayCall += () =>
             {
+                if (EditorPrefs.GetBool("LightNShadows_ResetScore_v1", true))
+                {
+                    EditorPrefs.SetBool("LightNShadows_ResetScore_v1", false);
+                    ResetHighScore();
+                }
+
                 if (EditorPrefs.GetBool("LightNShadows_NeedsSetup_v6", true))
                 {
                     EditorPrefs.SetBool("LightNShadows_NeedsSetup_v6", false);
                     SetupSceneInternal(false);
                 }
             };
+        }
+
+        [MenuItem("Tools/LightNShadows/Reset Best Score to 0")]
+        public static void ResetHighScore()
+        {
+            PlayerPrefs.SetInt("LightNShadows_HighScore", 0);
+            PlayerPrefs.Save();
+            Debug.Log("<color=green>[LightNShadows]</color> Best score successfully reset to 0!");
         }
 
         [MenuItem("Tools/LightNShadows/Auto-Setup Scene")]
