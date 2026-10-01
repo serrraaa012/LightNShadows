@@ -29,7 +29,6 @@ namespace LightNShadows
         private GUIStyle cardBodyStyle;
         private GUIStyle buttonStyle;
         private GUIStyle hudStyle;
-        private GUIStyle comboStyle;
 
         private bool stylesInitialized = false;
 
@@ -161,15 +160,21 @@ namespace LightNShadows
                 alignment = TextAnchor.UpperLeft
             };
 
-            comboStyle = new GUIStyle(GUI.skin.label)
-            {
-                font = displayFont,
-                fontSize = 26,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.UpperLeft
-            };
-
             stylesInitialized = true;
+        }
+
+        private void Update()
+        {
+            if (GameManager.Instance == null) return;
+
+            // Toggle pause with Escape or P key
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P))
+            {
+                if (GameManager.Instance.IsPlaying || GameManager.Instance.IsPaused)
+                {
+                    GameManager.Instance.TogglePause();
+                }
+            }
         }
 
         private void OnGUI()
@@ -191,6 +196,9 @@ namespace LightNShadows
                     break;
                 case GameManager.GameState.Playing:
                     DrawHUD();
+                    break;
+                case GameManager.GameState.Paused:
+                    DrawPauseMenu();
                     break;
                 case GameManager.GameState.GameOver:
                     DrawGameOverMenu();
@@ -380,15 +388,15 @@ namespace LightNShadows
                 "PHASE"
             );
 
-            // 4. Directive Card 3: SCORING & COMBOS
+            // 4. Directive Card 3: SCORING & GEMS
             DrawDirectiveCard(
                 new Rect(subX, startY + 188f, subW, itemH),
                 null,
                 new Color(1.3f, 0.88f, 0.25f),
-                "SCORING & COMBOS",
-                "SCORE:  +1 per obstacle & Gem cleared",
-                "Chain safe phases to boost combo multiplier up to x5!",
-                "x5 BOOST"
+                "SCORING & GEMS",
+                "SCORE:  +1 per obstacle & Prism Orb collected",
+                "Phase through matching gates and grab orbs to beat your best!",
+                "SCORE"
             );
 
             // 5. Action Buttons
@@ -512,16 +520,110 @@ namespace LightNShadows
             subHud.normal.textColor = new Color(1f, 0.88f, 0.35f, 0.95f);
             GUI.Label(new Rect(scoreX, scoreY + 34, 300, 26), $"BEST:  {GameManager.Instance.HighScore:N0}", subHud);
 
-            // 3. COMBO STREAK (Floating with drop-shadow, no black background)
-            if (GameManager.Instance.ComboCount > 1)
-            {
-                float comboY = scoreY + 66f;
-                Color comboColor = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
+            // 3. CORNER PAUSE BUTTON (Top-Right)
+            float pauseSize = 44f;
+            Rect pauseRect = new Rect(Screen.width - pauseSize - 22f, 20f, pauseSize, pauseSize);
 
-                comboStyle.normal.textColor = new Color(0.02f, 0.03f, 0.06f, 0.95f);
-                GUI.Label(new Rect(scoreX + 2, comboY + 2, 300, 30), $"★ COMBO x{GameManager.Instance.ComboCount}!", comboStyle);
-                comboStyle.normal.textColor = comboColor;
-                GUI.Label(new Rect(scoreX, comboY, 300, 30), $"★ COMBO x{GameManager.Instance.ComboCount}!", comboStyle);
+            // Interaction
+            if (GUI.Button(pauseRect, GUIContent.none, GUIStyle.none))
+            {
+                GameManager.Instance.PauseGame();
+            }
+
+            bool isHover = pauseRect.Contains(Event.current.mousePosition);
+            Color btnBg = isHover ? new Color(0.18f, 0.22f, 0.32f, 0.95f) : new Color(0.06f, 0.08f, 0.14f, 0.85f);
+            GUI.color = btnBg;
+            GUI.DrawTexture(pauseRect, Texture2D.whiteTexture);
+
+            // Glow border on hover
+            Color borderCol = isHover ? new Color(0.3f, 0.9f, 1.2f, 1f) : new Color(0.45f, 0.65f, 0.85f, 0.5f);
+            GUI.color = borderCol;
+            DrawBorder(pauseRect, 2f);
+
+            // Draw crisp pause bars (||)
+            Color barCol = isHover ? Color.white : new Color(0.9f, 0.95f, 1f, 0.95f);
+            GUI.color = barCol;
+            float barW = 5f;
+            float barH = 18f;
+            float barY = pauseRect.y + (pauseSize - barH) * 0.5f;
+            float barGap = 6f;
+            float totalBarsW = barW * 2f + barGap;
+            float startBarX = pauseRect.x + (pauseSize - totalBarsW) * 0.5f;
+
+            GUI.DrawTexture(new Rect(startBarX, barY, barW, barH), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(startBarX + barW + barGap, barY, barW, barH), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+        }
+
+        // ==========================================
+        // 3.5. IN-GAME PAUSE MENU MODAL
+        // ==========================================
+        private void DrawPauseMenu()
+        {
+            if (GameManager.Instance == null) return;
+
+            // Fullscreen soft dark glass overlay over the frozen gameplay
+            Rect screenRect = new Rect(0, 0, Screen.width, Screen.height);
+            GUI.color = new Color(0.02f, 0.03f, 0.07f, 0.80f);
+            GUI.DrawTexture(screenRect, Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            float midX = Screen.width * 0.5f;
+            float midY = Screen.height * 0.5f;
+
+            float cardW = Mathf.Min(480f, Screen.width * 0.88f);
+            float cardH = Mathf.Min(358f, Screen.height * 0.85f);
+            Rect panelRect = new Rect(midX - cardW * 0.5f, midY - cardH * 0.5f, cardW, cardH);
+
+            DrawGlassPanel(panelRect);
+
+            // 1. Header: "PAUSED" (Cyan / Light Blue neon glow)
+            GUIStyle pauseHeader = new GUIStyle(headerStyle) { fontSize = 42 };
+            pauseHeader.normal.textColor = new Color(0.02f, 0.04f, 0.08f, 0.9f);
+            GUI.Label(new Rect(panelRect.x + 2, panelRect.y + 30, panelRect.width, 50), "PAUSED", pauseHeader);
+
+            pauseHeader.normal.textColor = new Color(0.25f, 0.85f, 1.3f);
+            GUI.Label(new Rect(panelRect.x, panelRect.y + 28, panelRect.width, 50), "PAUSED", pauseHeader);
+
+            // 2. Score Banner Box
+            float boxW = panelRect.width - 60f;
+            float boxH = 54f;
+            Rect boxRect = new Rect(panelRect.x + 30f, panelRect.y + 90f, boxW, boxH);
+
+            GUI.color = new Color(0.08f, 0.10f, 0.16f, 0.95f);
+            GUI.DrawTexture(boxRect, Texture2D.whiteTexture);
+            GUI.color = new Color(0.25f, 0.8f, 1.1f, 0.35f);
+            DrawBorder(boxRect, 1.5f);
+            GUI.color = Color.white;
+
+            GUIStyle scoreSummaryStyle = new GUIStyle(GUI.skin.label)
+            {
+                font = displayFont,
+                fontSize = 18,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+            scoreSummaryStyle.normal.textColor = Color.white;
+            GUI.Label(boxRect, $"SCORE: {GameManager.Instance.CurrentScore:N0}    |    BEST: {GameManager.Instance.HighScore:N0}", scoreSummaryStyle);
+
+            // 3. Action Buttons
+            float btnW = 260f;
+            float btnH = 46f;
+            float btnX = midX - btnW * 0.5f;
+
+            if (GUI.Button(new Rect(btnX, panelRect.y + 164, btnW, btnH), "RESUME", buttonStyle))
+            {
+                GameManager.Instance.ResumeGame();
+            }
+
+            if (GUI.Button(new Rect(btnX, panelRect.y + 224, btnW, btnH), "RESTART", buttonStyle))
+            {
+                GameManager.Instance.RestartGame();
+            }
+
+            if (GUI.Button(new Rect(btnX, panelRect.y + 284, btnW, btnH), "MAIN MENU", buttonStyle))
+            {
+                GameManager.Instance.OpenMainMenu();
             }
         }
 
@@ -596,8 +698,7 @@ namespace LightNShadows
                 alignment = TextAnchor.MiddleCenter
             };
             statLine.normal.textColor = new Color(0.7f, 0.8f, 0.95f);
-            string comboStat = (GameManager.Instance.MaxCombo > 1) ? $"   |   MAX COMBO: x{GameManager.Instance.MaxCombo}" : "";
-            GUI.Label(new Rect(boxRect.x, boxRect.y + 60, boxRect.width, 28), $"BEST: {GameManager.Instance.HighScore:N0} PTS{comboStat}", statLine);
+            GUI.Label(new Rect(boxRect.x, boxRect.y + 60, boxRect.width, 28), $"BEST: {GameManager.Instance.HighScore:N0} PTS", statLine);
 
             // 4. Action Buttons
             float btnW = 280f;

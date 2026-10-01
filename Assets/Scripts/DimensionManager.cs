@@ -54,9 +54,18 @@ namespace LightNShadows
             }
 
             // One-button toggle: Spacebar, Left Click, or Screen Tap
-            if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
+            if (Input.GetKeyDown(KeyCode.Space))
             {
                 ToggleDimension();
+            }
+            else if (Input.GetMouseButtonDown(0))
+            {
+                // Don't toggle dimension if clicking pause button in top-right corner
+                bool isPauseArea = Input.mousePosition.x >= Screen.width - 80f && Input.mousePosition.y >= Screen.height - 80f;
+                if (!isPauseArea)
+                {
+                    ToggleDimension();
+                }
             }
 
             // Smoothly interpolate camera background color

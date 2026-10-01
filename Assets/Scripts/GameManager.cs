@@ -13,6 +13,7 @@ namespace LightNShadows
             Title,
             Instructions,
             Playing,
+            Paused,
             GameOver
         }
 
@@ -20,6 +21,7 @@ namespace LightNShadows
         [SerializeField] private GameState currentState = GameState.IntroSplash;
         public GameState State => currentState;
         public bool IsPlaying => currentState == GameState.Playing;
+        public bool IsPaused => currentState == GameState.Paused;
         public bool IsGameOver => currentState == GameState.GameOver;
         public bool IsNewHighScore { get; private set; } = false;
 
@@ -33,11 +35,11 @@ namespace LightNShadows
             startImmediately = false;
         }
 
-        [Header("Score & Combos")]
+        [Header("Score")]
         public int CurrentScore { get; private set; } = 0;
         public int HighScore { get; private set; } = 0;
-        public int ComboCount { get; private set; } = 0;
-        public int MaxCombo { get; private set; } = 0;
+        public int ComboCount => 0;
+        public int MaxCombo => 0;
 
         [Header("Score Settings")]
         [SerializeField] private float scorePerSecond = 10f;
@@ -87,11 +89,36 @@ namespace LightNShadows
 
         public void StartGame()
         {
+            Time.timeScale = 1f;
             currentState = GameState.Playing;
             CurrentScore = 0;
-            ComboCount = 0;
-            MaxCombo = 0;
             IsNewHighScore = false;
+        }
+
+        public void PauseGame()
+        {
+            if (currentState != GameState.Playing) return;
+            currentState = GameState.Paused;
+            Time.timeScale = 0f;
+        }
+
+        public void ResumeGame()
+        {
+            if (currentState != GameState.Paused) return;
+            currentState = GameState.Playing;
+            Time.timeScale = 1f;
+        }
+
+        public void TogglePause()
+        {
+            if (currentState == GameState.Playing)
+            {
+                PauseGame();
+            }
+            else if (currentState == GameState.Paused)
+            {
+                ResumeGame();
+            }
         }
 
         public void OpenInstructions()
@@ -101,6 +128,7 @@ namespace LightNShadows
 
         public void OpenMainMenu()
         {
+            Time.timeScale = 1f;
             currentState = GameState.Title;
         }
 
@@ -121,9 +149,6 @@ namespace LightNShadows
         {
             if (!IsPlaying) return;
 
-            ComboCount++;
-            if (ComboCount > MaxCombo) MaxCombo = ComboCount;
-
             AddScore(1);
         }
 
@@ -131,6 +156,7 @@ namespace LightNShadows
         {
             if (currentState == GameState.GameOver) return;
 
+            Time.timeScale = 1f;
             currentState = GameState.GameOver;
             PlayerPrefs.Save();
         }
@@ -143,6 +169,7 @@ namespace LightNShadows
 
         public void RestartGame()
         {
+            Time.timeScale = 1f;
             startImmediately = true;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
