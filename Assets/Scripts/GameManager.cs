@@ -9,6 +9,7 @@ namespace LightNShadows
 
         public enum GameState
         {
+            IntroSplash,
             Title,
             Instructions,
             Playing,
@@ -16,11 +17,21 @@ namespace LightNShadows
         }
 
         [Header("State")]
-        [SerializeField] private GameState currentState = GameState.Title;
+        [SerializeField] private GameState currentState = GameState.IntroSplash;
         public GameState State => currentState;
         public bool IsPlaying => currentState == GameState.Playing;
         public bool IsGameOver => currentState == GameState.GameOver;
         public bool IsNewHighScore { get; private set; } = false;
+
+        private static bool hasShownIntro = false;
+        private static bool startImmediately = false;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            hasShownIntro = false;
+            startImmediately = false;
+        }
 
         [Header("Score & Combos")]
         public int CurrentScore { get; private set; } = 0;
@@ -47,13 +58,27 @@ namespace LightNShadows
             }
 
             HighScore = PlayerPrefs.GetInt(HighScoreKey, 0);
+
+            if (startImmediately)
+            {
+                startImmediately = false;
+                currentState = GameState.Playing;
+            }
+            else if (!hasShownIntro)
+            {
+                currentState = GameState.IntroSplash;
+            }
+            else
+            {
+                currentState = GameState.Title;
+            }
         }
 
         private void Update()
         {
-            if (currentState == GameState.Title || currentState == GameState.Instructions || currentState == GameState.GameOver)
+            if (currentState != GameState.Playing)
             {
-                // Menus are navigated cleanly via on-screen mouse buttons
+                // Splash & menus are navigated cleanly via timers/buttons
                 return;
             }
 
@@ -118,8 +143,15 @@ namespace LightNShadows
             PlayerPrefs.Save();
         }
 
+        public void CompleteIntroSplash()
+        {
+            hasShownIntro = true;
+            currentState = GameState.Title;
+        }
+
         public void RestartGame()
         {
+            startImmediately = true;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
     }

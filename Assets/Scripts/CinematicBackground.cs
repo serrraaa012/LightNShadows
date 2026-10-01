@@ -7,11 +7,12 @@ namespace LightNShadows
         public static CinematicBackground Instance { get; private set; }
 
         [Header("Master Artwork")]
-        [SerializeField] private SpriteRenderer bgRendererA;
-        [SerializeField] private SpriteRenderer bgRendererB;
-        [SerializeField] private float parallaxSpeed = 0.8f;
+        [SerializeField] private SpriteRenderer bgRenderer;
 
-        private float bgWidth = 24f;
+        private Transform playerTransform;
+        private Camera targetCam;
+        private float lastAspect = -1f;
+        private float lastOrthoSize = -1f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoInit()
@@ -42,36 +43,52 @@ namespace LightNShadows
             GameObject oldParallax = GameObject.Find("ParallaxBackdrop");
             if (oldParallax != null) oldParallax.SetActive(false);
 
+            Transform oldB = transform.Find("Backdrop_B");
+            if (oldB != null) Destroy(oldB.gameObject);
+
             Sprite bgSprite = LoadBackgroundSprite();
 
             if (bgSprite != null)
             {
-                // Create two scrolling quads for infinite seamless parallax
-                if (bgRendererA == null)
-                {
-                    GameObject quadA = new GameObject("Backdrop_A");
-                    quadA.transform.SetParent(transform);
-                    quadA.transform.position = new Vector3(0f, 0f, 5f);
-                    quadA.transform.localScale = new Vector3(1.45f, 1.45f, 1f);
+                Transform transA = transform.Find("Backdrop_A");
+                GameObject quadA = (transA != null) ? transA.gameObject : new GameObject("Backdrop_A");
+                quadA.transform.SetParent(transform);
+                quadA.transform.position = new Vector3(0f, 0.2f, 5f);
 
-                    bgRendererA = quadA.AddComponent<SpriteRenderer>();
-                    bgRendererA.sprite = bgSprite;
-                    bgRendererA.sortingOrder = -20;
-                }
+                bgRenderer = quadA.GetComponent<SpriteRenderer>();
+                if (bgRenderer == null) bgRenderer = quadA.AddComponent<SpriteRenderer>();
+                bgRenderer.sprite = bgSprite;
+                bgRenderer.sortingOrder = -20; // Behind all gameplay elements
 
-                if (bgRendererB == null)
-                {
-                    GameObject quadB = new GameObject("Backdrop_B");
-                    quadB.transform.SetParent(transform);
-                    bgWidth = bgRendererA.bounds.size.x;
-                    quadB.transform.position = new Vector3(bgWidth - 0.05f, 0f, 5f);
-                    quadB.transform.localScale = new Vector3(1.45f, 1.45f, 1f);
-
-                    bgRendererB = quadB.AddComponent<SpriteRenderer>();
-                    bgRendererB.sprite = bgSprite;
-                    bgRendererB.sortingOrder = -20;
-                }
+                FitToScreen();
             }
+        }
+
+        private void FitToScreen()
+        {
+            if (bgRenderer == null || bgRenderer.sprite == null) return;
+            if (targetCam == null) targetCam = Camera.main;
+            if (targetCam == null) return;
+
+            // Full visible dimensions of the orthographic camera
+            float camHeight = 2f * targetCam.orthographicSize;
+            float camWidth = camHeight * targetCam.aspect;
+
+            float spriteWidth = bgRenderer.sprite.bounds.size.x;
+            float spriteHeight = bgRenderer.sprite.bounds.size.y;
+
+            if (spriteWidth <= 0f || spriteHeight <= 0f) return;
+
+            // Scale to cover the entire camera viewport with safety margin (ScaleAndCrop behavior)
+            // Extra margin ensures ZERO border gaps even on ultra-wide screens or Free Aspect
+            float scaleX = camWidth / spriteWidth;
+            float scaleY = camHeight / spriteHeight;
+            float coverScale = Mathf.Max(scaleX, scaleY) * 1.25f;
+
+            bgRenderer.transform.localScale = new Vector3(coverScale, coverScale, 1f);
+
+            lastAspect = targetCam.aspect;
+            lastOrthoSize = targetCam.orthographicSize;
         }
 
         private Sprite LoadBackgroundSprite()
@@ -106,6 +123,14 @@ namespace LightNShadows
 
         private void Start()
         {
+            targetCam = Camera.main;
+
+            GameObject player = GameObject.FindWithTag("Player");
+            if (player == null) player = GameObject.Find("Player");
+            if (player != null) playerTransform = player.transform;
+
+            FitToScreen();
+
             if (DimensionManager.Instance != null)
             {
                 HandleDimensionChanged(DimensionManager.Instance.CurrentDimension);
@@ -114,36 +139,35 @@ namespace LightNShadows
 
         private void Update()
         {
-            if (GameManager.Instance != null && (!GameManager.Instance.IsPlaying || GameManager.Instance.IsGameOver))
+            if (targetCam == null) targetCam = Camera.main;
+
+            // If Game View aspect ratio changes (e.g. user resizes Free Aspect window), dynamically re-cover
+            if (targetCam != null && (Mathf.Abs(targetCam.aspect - lastAspect) > 0.01f || Mathf.Abs(targetCam.orthographicSize - lastOrthoSize) > 0.01f))
             {
-                return;
+                FitToScreen();
             }
 
-            // Infinite smooth parallax scrolling
-            if (bgRendererA != null && bgRendererB != null)
+            if (bgRenderer == null) return;
+
+            // Subtle vertical parallax response when player jumps
+            if (playerTransform != null && GameManager.Instance != null && GameManager.Instance.IsPlaying)
             {
-                bgRendererA.transform.position += Vector3.left * parallaxSpeed * Time.deltaTime;
-                bgRendererB.transform.position += Vector3.left * parallaxSpeed * Time.deltaTime;
-
-                if (bgRendererA.transform.position.x < -bgWidth)
-                {
-                    bgRendererA.transform.position = new Vector3(bgRendererB.transform.position.x + bgWidth - 0.05f, bgRendererA.transform.position.y, bgRendererA.transform.position.z);
-                }
-
-                if (bgRendererB.transform.position.x < -bgWidth)
-                {
-                    bgRendererB.transform.position = new Vector3(bgRendererA.transform.position.x + bgWidth - 0.05f, bgRendererB.transform.position.y, bgRendererB.transform.position.z);
-                }
+                float jumpOffset = (playerTransform.position.y + 2.4f) * 0.05f;
+                float targetY = 0.2f + jumpOffset;
+                bgRenderer.transform.position = new Vector3(0f, Mathf.Lerp(bgRenderer.transform.position.y, targetY, Time.deltaTime * 6f), 5f);
             }
         }
 
         private void HandleDimensionChanged(DimensionType dim)
         {
-            bool isLight = (dim == DimensionType.Light);
-            Color tint = isLight ? new Color(1.1f, 1.05f, 0.95f, 1f) : new Color(0.65f, 0.60f, 1.05f, 1f);
+            if (bgRenderer == null) return;
 
-            if (bgRendererA != null) bgRendererA.color = tint;
-            if (bgRendererB != null) bgRendererB.color = tint;
+            bool isLight = (dim == DimensionType.Light);
+            // Light Realm: Crisp moonlit blue brilliance
+            // Shadow Realm: Deep mysterious indigo-violet nocturnal mood
+            Color tint = isLight ? new Color(1.08f, 1.08f, 1.12f, 1f) : new Color(0.68f, 0.62f, 0.95f, 1f);
+
+            bgRenderer.color = tint;
         }
     }
 }

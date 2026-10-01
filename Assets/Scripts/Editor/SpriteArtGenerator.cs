@@ -44,7 +44,7 @@ namespace LightNShadows.Editor
 
         private static void ImportMasterArtwork()
         {
-            string bgSource = Path.Combine(BrainDir, "celestial_eclipse_bg_1790875806619.jpg");
+            string bgSource = Path.Combine(BrainDir, ".user_uploaded/media_1790877488173.jpg");
             string logoSource = Path.Combine(BrainDir, "game_title_logo_1790875829034.jpg");
 
             string bgDest = $"{SpritesDir}/GameBackground.jpg";

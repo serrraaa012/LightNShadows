@@ -14,6 +14,11 @@ namespace LightNShadows
         private Texture2D iconJumpTex;
         private Texture2D iconPhaseTex;
 
+        // Intro Logo Flash
+        private float splashTimer = 0f;
+        private const float SplashDuration = 4.2f;
+        private bool splashAudioTriggered = false;
+
         private GUIStyle titleStyle;
         private GUIStyle headerStyle;
         private GUIStyle cardTitleStyle;
@@ -143,6 +148,9 @@ namespace LightNShadows
 
             switch (state)
             {
+                case GameManager.GameState.IntroSplash:
+                    DrawIntroSplash();
+                    break;
                 case GameManager.GameState.Title:
                     DrawStartMenu();
                     break;
@@ -159,6 +167,70 @@ namespace LightNShadows
         }
 
         // ==========================================
+        // 0. FULL-SCREEN INTRO LOGO FLASH
+        // ==========================================
+        private void DrawIntroSplash()
+        {
+            splashTimer += Time.deltaTime;
+
+            if (!splashAudioTriggered)
+            {
+                splashAudioTriggered = true;
+                if (SoundManager.Instance != null)
+                {
+                    SoundManager.Instance.PlayPhase();
+                }
+            }
+
+            // Allow skipping via tap/click after initial 0.5s
+            if (splashTimer > 0.5f && (Input.anyKeyDown || Input.GetMouseButtonDown(0)))
+            {
+                if (GameManager.Instance != null) GameManager.Instance.CompleteIntroSplash();
+                return;
+            }
+
+            if (splashTimer >= SplashDuration)
+            {
+                if (GameManager.Instance != null) GameManager.Instance.CompleteIntroSplash();
+                return;
+            }
+
+            Rect screenRect = new Rect(0, 0, Screen.width, Screen.height);
+
+            // Clean deep black base
+            GUI.color = Color.black;
+            GUI.DrawTexture(screenRect, Texture2D.whiteTexture);
+
+            // Alpha envelope (quick fade in 0.35s, stays full for majority, smooth fade out at end)
+            float logoAlpha = 1f;
+            if (splashTimer < 0.35f)
+            {
+                logoAlpha = Mathf.SmoothStep(0f, 1f, splashTimer / 0.35f);
+            }
+            else if (splashTimer > SplashDuration - 0.6f)
+            {
+                logoAlpha = Mathf.SmoothStep(1f, 0f, (splashTimer - (SplashDuration - 0.6f)) / 0.6f);
+            }
+
+            // Full-screen Title Logo image (fills the entire screen edge-to-edge, NOT above any other image)
+            if (titleLogoTex != null)
+            {
+                GUI.color = new Color(1f, 1f, 1f, logoAlpha);
+                GUI.DrawTexture(screenRect, titleLogoTex, ScaleMode.ScaleAndCrop);
+            }
+
+            // Initial Supernova Flash Ignition (Brilliant white flare bursting 0.0s - 0.35s)
+            if (splashTimer < 0.35f)
+            {
+                float flashAlpha = Mathf.Pow(1f - (splashTimer / 0.35f), 2f) * 0.9f;
+                GUI.color = new Color(1f, 1f, 1f, flashAlpha);
+                GUI.DrawTexture(screenRect, Texture2D.whiteTexture);
+            }
+
+            GUI.color = Color.white;
+        }
+
+        // ==========================================
         // 1. IMMERSIVE FULL-SCREEN START MENU
         // ==========================================
         private void DrawStartMenu()
@@ -169,37 +241,36 @@ namespace LightNShadows
             float midX = Screen.width * 0.5f;
             float midY = Screen.height * 0.5f;
 
-            // 1. Render Graphic Title Logo
-            if (titleLogoTex != null)
-            {
-                float logoW = Mathf.Clamp(Screen.width * 0.50f, 420f, 600f);
-                float logoH = logoW / 1.7916f; // 16:9 ratio
-                float logoX = midX - logoW * 0.5f;
-                float logoY = midY - logoH - 15f;
+            // 1. Sleek Typographic Title (No image on menu - clean and spacious!)
+            float titleY = midY - 140f;
+            Rect titleRect = new Rect(0, titleY, Screen.width, 70);
 
-                GUI.DrawTexture(new Rect(logoX, logoY, logoW, logoH), titleLogoTex, ScaleMode.ScaleToFit, true);
-            }
-            else
-            {
-                // Fallback styled text title
-                float titleY = midY - 110f;
-                Rect titleRect = new Rect(0, titleY, Screen.width, 70);
+            // Shadow
+            titleStyle.normal.textColor = new Color(0.02f, 0.03f, 0.08f, 0.95f);
+            GUI.Label(new Rect(2, titleY + 3, Screen.width, 70), "LIGHT   N   SHADOWS", titleStyle);
 
-                titleStyle.normal.textColor = new Color(0.02f, 0.03f, 0.08f, 0.95f);
-                GUI.Label(new Rect(2, titleY + 3, Screen.width, 70), "LIGHT   N   SHADOWS", titleStyle);
+            // Dual Glow Backlight
+            titleStyle.normal.textColor = new Color(0.2f, 0.9f, 1.4f, 0.55f);
+            GUI.Label(new Rect(-1, titleY - 1, Screen.width, 70), "LIGHT   N   SHADOWS", titleStyle);
 
-                titleStyle.normal.textColor = new Color(0.2f, 0.9f, 1.4f, 0.6f);
-                GUI.Label(new Rect(-1, titleY - 1, Screen.width, 70), "LIGHT   N   SHADOWS", titleStyle);
+            // Crisp Front Title
+            titleStyle.normal.textColor = Color.white;
+            GUI.Label(titleRect, "LIGHT   N   SHADOWS", titleStyle);
 
-                titleStyle.normal.textColor = Color.white;
-                GUI.Label(titleRect, "LIGHT   N   SHADOWS", titleStyle);
-            }
+            // Sleek Dual Divider Bar: Solar Gold (Left) & Electric Cyan (Right)
+            float divHalf = 150f;
+            float divY = titleY + 68f;
+            GUI.color = new Color(1.3f, 0.88f, 0.25f, 0.85f); // Solar Gold
+            GUI.DrawTexture(new Rect(midX - divHalf, divY, divHalf, 2), Texture2D.whiteTexture);
+            GUI.color = new Color(0.2f, 0.95f, 1.4f, 0.85f);  // Electric Cyan
+            GUI.DrawTexture(new Rect(midX, divY, divHalf, 2), Texture2D.whiteTexture);
+            GUI.color = Color.white;
 
             // 2. High Score Ribbon Badge
             int best = (GameManager.Instance != null) ? GameManager.Instance.HighScore : 0;
             float badgeW = 280f;
-            float badgeH = 36f;
-            float badgeY = midY + 30f;
+            float badgeH = 38f;
+            float badgeY = midY - 25f;
             Rect badgeRect = new Rect(midX - badgeW * 0.5f, badgeY, badgeW, badgeH);
 
             GUI.color = new Color(0.06f, 0.08f, 0.14f, 0.92f);
@@ -218,16 +289,16 @@ namespace LightNShadows
             GUI.Label(badgeRect, $"★  RECORD: {best:N0} PTS  ★", badgeStyle);
 
             // 3. Action Buttons (Clean, responsive pill buttons)
-            float btnW = 290f;
-            float btnH = 54f;
+            float btnW = 300f;
+            float btnH = 56f;
             float btnX = midX - btnW * 0.5f;
 
-            if (GUI.Button(new Rect(btnX, badgeY + 54f, btnW, btnH), "PLAY", buttonStyle))
+            if (GUI.Button(new Rect(btnX, midY + 45f, btnW, btnH), "PLAY", buttonStyle))
             {
                 GameManager.Instance.StartGame();
             }
 
-            if (GUI.Button(new Rect(btnX, badgeY + 120f, btnW, btnH), "HOW TO PLAY", buttonStyle))
+            if (GUI.Button(new Rect(btnX, midY + 118f, btnW, btnH), "HOW TO PLAY", buttonStyle))
             {
                 GameManager.Instance.OpenInstructions();
             }
@@ -348,28 +419,28 @@ namespace LightNShadows
             if (GameManager.Instance == null) return;
 
             bool isLight = DimensionManager.Instance != null && DimensionManager.Instance.CurrentDimension == DimensionType.Light;
-            Color primaryCol = isLight ? new Color(0.08f, 0.09f, 0.14f) : Color.white;
+            Color primaryCol = Color.white;
 
             // Score Badge
             hudStyle.normal.textColor = primaryCol;
             GUI.Label(new Rect(35, 25, 300, 35), $"SCORE: {GameManager.Instance.CurrentScore:N0}", hudStyle);
 
             GUIStyle subHud = new GUIStyle(hudStyle) { fontSize = 16 };
-            subHud.normal.textColor = new Color(primaryCol.r, primaryCol.g, primaryCol.b, 0.7f);
+            subHud.normal.textColor = new Color(primaryCol.r, primaryCol.g, primaryCol.b, 0.75f);
             GUI.Label(new Rect(35, 60, 300, 25), $"BEST:  {GameManager.Instance.HighScore:N0}", subHud);
 
             // Combo Streak
             if (GameManager.Instance.ComboCount > 1)
             {
-                comboStyle.normal.textColor = isLight ? new Color(0.9f, 0.5f, 0.05f) : new Color(0.2f, 0.95f, 1.4f);
+                comboStyle.normal.textColor = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
                 GUI.Label(new Rect(35, 90, 300, 35), $"COMBO x{GameManager.Instance.ComboCount}!", comboStyle);
             }
 
             // Top-Right Active Realm Indicator
-            string realmText = isLight ? "REALM // SOLAR LIGHT" : "REALM // SHADOW VOID";
+            string realmText = isLight ? "REALM // LIGHT" : "REALM // SHADOW";
             GUIStyle rightStyle = new GUIStyle(hudStyle) { alignment = TextAnchor.UpperRight };
-            rightStyle.normal.textColor = isLight ? new Color(0.85f, 0.45f, 0.05f) : new Color(0.2f, 0.95f, 1.4f);
-            GUI.Label(new Rect(Screen.width - 370, 25, 335, 35), realmText, rightStyle);
+            rightStyle.normal.textColor = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
+            GUI.Label(new Rect(Screen.width - 320, 25, 285, 35), realmText, rightStyle);
         }
 
         // ==========================================
