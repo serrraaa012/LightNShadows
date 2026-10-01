@@ -281,13 +281,6 @@ namespace LightNShadows
                 DrawFullScreenBackdrop(new Color(0.02f, 0.03f, 0.06f, 0.40f));
             }
 
-            // Soft atmospheric gradient shade across bottom for crystal-clear button visibility
-            float bottomShadeH = Screen.height * 0.42f;
-            Rect bottomShade = new Rect(0, Screen.height - bottomShadeH, Screen.width, bottomShadeH);
-            GUI.color = new Color(0.02f, 0.03f, 0.06f, 0.35f);
-            GUI.DrawTexture(bottomShade, Texture2D.whiteTexture);
-            GUI.color = Color.white;
-
             float midX = Screen.width * 0.5f;
 
             // 2. High Score Ribbon Badge
