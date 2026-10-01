@@ -31,6 +31,13 @@ namespace LightNShadows.Editor
                     EditorPrefs.SetBool("LightNShadows_NeedsSetup_v6", false);
                     SetupSceneInternal(false);
                 }
+
+                if (EditorPrefs.GetBool("LightNShadows_MusicSetup_v1", true))
+                {
+                    EditorPrefs.SetBool("LightNShadows_MusicSetup_v1", false);
+                    AssetDatabase.Refresh();
+                    SetupSceneInternal(false);
+                }
             };
         }
 
@@ -135,7 +142,17 @@ namespace LightNShadows.Editor
 
             GameObject soundMgrObj = GameObject.Find("SoundManager");
             if (soundMgrObj == null) soundMgrObj = new GameObject("SoundManager");
-            if (soundMgrObj.GetComponent<SoundManager>() == null) soundMgrObj.AddComponent<SoundManager>();
+            SoundManager soundMgr = soundMgrObj.GetComponent<SoundManager>();
+            if (soundMgr == null) soundMgr = soundMgrObj.AddComponent<SoundManager>();
+
+            AudioClip musicClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Music_LightNShadows.wav");
+            if (musicClip == null) musicClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Resources/Audio/Music_LightNShadows.wav");
+            if (musicClip != null)
+            {
+                SerializedObject smSo = new SerializedObject(soundMgr);
+                smSo.FindProperty("backgroundMusic").objectReferenceValue = musicClip;
+                smSo.ApplyModifiedProperties();
+            }
 
             // 5. Cinematic Background (Master Celestial Artwork Parallax)
             GameObject oldParallax = GameObject.Find("ParallaxBackdrop");

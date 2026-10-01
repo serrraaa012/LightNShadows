@@ -323,11 +323,13 @@ namespace LightNShadows
 
             if (GUI.Button(new Rect(btnX, playBtnY, btnW, btnH), "PLAY", buttonStyle))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.StartGame();
             }
 
             if (GUI.Button(new Rect(btnX, howToBtnY, btnW, btnH), "HOW TO PLAY", buttonStyle))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.OpenInstructions();
             }
         }
@@ -406,11 +408,13 @@ namespace LightNShadows
 
             if (GUI.Button(new Rect(midX - btnW - 14, bY, btnW, btnH), "PLAY", buttonStyle))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.StartGame();
             }
 
             if (GUI.Button(new Rect(midX + 14, bY, btnW, btnH), "BACK", buttonStyle))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.OpenMainMenu();
             }
         }
@@ -527,6 +531,7 @@ namespace LightNShadows
             // Interaction
             if (GUI.Button(pauseRect, GUIContent.none, GUIStyle.none))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.PauseGame();
             }
 
@@ -613,16 +618,19 @@ namespace LightNShadows
 
             if (GUI.Button(new Rect(btnX, panelRect.y + 164, btnW, btnH), "RESUME", buttonStyle))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.ResumeGame();
             }
 
             if (GUI.Button(new Rect(btnX, panelRect.y + 224, btnW, btnH), "RESTART", buttonStyle))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.RestartGame();
             }
 
             if (GUI.Button(new Rect(btnX, panelRect.y + 284, btnW, btnH), "MAIN MENU", buttonStyle))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.OpenMainMenu();
             }
         }
@@ -707,11 +715,13 @@ namespace LightNShadows
 
             if (GUI.Button(new Rect(btnX, panelRect.y + 250, btnW, btnH), "PLAY AGAIN", buttonStyle))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.RestartGame();
             }
 
             if (GUI.Button(new Rect(btnX, panelRect.y + 318, btnW, btnH), "MAIN MENU", buttonStyle))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.OpenMainMenu();
             }
         }

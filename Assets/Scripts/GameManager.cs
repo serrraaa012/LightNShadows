@@ -100,6 +100,7 @@ namespace LightNShadows
             if (currentState != GameState.Playing) return;
             currentState = GameState.Paused;
             Time.timeScale = 0f;
+            if (SoundManager.Instance != null) SoundManager.Instance.PauseMusic();
         }
 
         public void ResumeGame()
@@ -107,6 +108,7 @@ namespace LightNShadows
             if (currentState != GameState.Paused) return;
             currentState = GameState.Playing;
             Time.timeScale = 1f;
+            if (SoundManager.Instance != null) SoundManager.Instance.ResumeMusic();
         }
 
         public void TogglePause()
