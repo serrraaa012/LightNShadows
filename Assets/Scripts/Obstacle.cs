@@ -116,12 +116,12 @@ namespace LightNShadows
                     if (transform.position.x < playerTrans.position.x - 0.5f)
                     {
                         hasScored = true;
-                        GameManager.Instance.AddScore(100);
+                        GameManager.Instance.AddScore(1);
 
                         if (FloatingTextManager.Instance != null)
                         {
                             Vector3 popupPos = new Vector3(playerTrans.position.x + 0.3f, playerTrans.position.y + 1.2f, 0f);
-                            FloatingTextManager.Instance.SpawnPopup(popupPos, "+100", new Color(1f, 0.9f, 0.25f));
+                            FloatingTextManager.Instance.SpawnPopup(popupPos, "+1", new Color(1f, 0.9f, 0.25f));
                         }
                     }
                 }

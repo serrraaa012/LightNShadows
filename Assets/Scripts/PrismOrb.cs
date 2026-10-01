@@ -7,7 +7,7 @@ namespace LightNShadows
     {
         [SerializeField] private float speed = 7f;
         [SerializeField] private float offscreenX = -14f;
-        [SerializeField] private int scoreValue = 100;
+        [SerializeField] private int scoreValue = 1;
 
         private float hoverTimer;
         private Vector3 startPos;

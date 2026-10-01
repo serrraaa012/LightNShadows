@@ -213,7 +213,7 @@ namespace LightNShadows
                         : new Color(1.3f, 0.85f, 0.2f);
 
                     int combo = (GameManager.Instance != null) ? GameManager.Instance.ComboCount : 1;
-                    string label = (combo > 1) ? $"COMBO x{combo}!" : "+50";
+                    string label = (combo > 1) ? $"COMBO x{combo}!" : "+1";
                     FloatingTextManager.Instance.SpawnPopup(transform.position, label, textCol);
                 }
             }

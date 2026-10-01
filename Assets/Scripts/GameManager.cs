@@ -124,8 +124,7 @@ namespace LightNShadows
             ComboCount++;
             if (ComboCount > MaxCombo) MaxCombo = ComboCount;
 
-            int bonus = 50 * Mathf.Min(ComboCount, 5);
-            AddScore(bonus);
+            AddScore(1);
         }
 
         public void TriggerGameOver()

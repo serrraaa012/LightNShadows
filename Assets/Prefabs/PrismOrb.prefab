@@ -139,4 +139,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 7
   offscreenX: -14
-  scoreValue: 100
+  scoreValue: 1

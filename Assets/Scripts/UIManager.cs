@@ -357,7 +357,7 @@ namespace LightNShadows
                 new Color(1.3f, 0.85f, 0.2f),
                 "COMBOS & PRISM GEMS  —  SCORE BOOST",
                 "Consecutive phase passes increase your COMBO multiplier up to x5!\n" +
-                "Collect floating diamond Prism Orbs along the track for +100 bonus points.",
+                "Collect floating diamond Prism Orbs along the track for +1 bonus point.",
                 "x5 BOOST"
             );
 
