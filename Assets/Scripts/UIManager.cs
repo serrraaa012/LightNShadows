@@ -421,26 +421,48 @@ namespace LightNShadows
             bool isLight = DimensionManager.Instance != null && DimensionManager.Instance.CurrentDimension == DimensionType.Light;
             Color primaryCol = Color.white;
 
-            // Score Badge
-            hudStyle.normal.textColor = primaryCol;
-            GUI.Label(new Rect(35, 25, 300, 35), $"SCORE: {GameManager.Instance.CurrentScore:N0}", hudStyle);
+            // Left Score Backing Card
+            Rect scoreCard = new Rect(25, 18, 220, 75);
+            GUI.color = new Color(0.04f, 0.06f, 0.12f, 0.72f);
+            GUI.DrawTexture(scoreCard, Texture2D.whiteTexture);
+            GUI.color = new Color(0.3f, 0.8f, 1f, 0.35f);
+            DrawBorder(scoreCard, 1f);
+            GUI.color = Color.white;
 
-            GUIStyle subHud = new GUIStyle(hudStyle) { fontSize = 16 };
-            subHud.normal.textColor = new Color(primaryCol.r, primaryCol.g, primaryCol.b, 0.75f);
-            GUI.Label(new Rect(35, 60, 300, 25), $"BEST:  {GameManager.Instance.HighScore:N0}", subHud);
+            hudStyle.normal.textColor = Color.white;
+            GUI.Label(new Rect(38, 24, 200, 35), $"SCORE: {GameManager.Instance.CurrentScore:N0}", hudStyle);
+
+            GUIStyle subHud = new GUIStyle(hudStyle) { fontSize = 15 };
+            subHud.normal.textColor = new Color(0.85f, 0.9f, 1f, 0.8f);
+            GUI.Label(new Rect(38, 58, 200, 25), $"BEST:  {GameManager.Instance.HighScore:N0}", subHud);
 
             // Combo Streak
             if (GameManager.Instance.ComboCount > 1)
             {
+                Rect comboCard = new Rect(25, 98, 220, 36);
+                GUI.color = new Color(0.04f, 0.06f, 0.12f, 0.75f);
+                GUI.DrawTexture(comboCard, Texture2D.whiteTexture);
+                GUI.color = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
+                DrawBorder(comboCard, 1.5f);
+                GUI.color = Color.white;
+
                 comboStyle.normal.textColor = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
-                GUI.Label(new Rect(35, 90, 300, 35), $"COMBO x{GameManager.Instance.ComboCount}!", comboStyle);
+                GUI.Label(new Rect(38, 102, 200, 30), $"★ COMBO x{GameManager.Instance.ComboCount}!", comboStyle);
             }
 
             // Top-Right Active Realm Indicator
-            string realmText = isLight ? "REALM // LIGHT" : "REALM // SHADOW";
-            GUIStyle rightStyle = new GUIStyle(hudStyle) { alignment = TextAnchor.UpperRight };
-            rightStyle.normal.textColor = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
-            GUI.Label(new Rect(Screen.width - 320, 25, 285, 35), realmText, rightStyle);
+            Rect realmCard = new Rect(Screen.width - 255, 18, 230, 42);
+            GUI.color = new Color(0.04f, 0.06f, 0.12f, 0.72f);
+            GUI.DrawTexture(realmCard, Texture2D.whiteTexture);
+            Color realmCol = isLight ? new Color(1.3f, 0.88f, 0.25f) : new Color(0.2f, 0.95f, 1.4f);
+            GUI.color = realmCol;
+            DrawBorder(realmCard, 1.5f);
+            GUI.color = Color.white;
+
+            string realmText = isLight ? "REALM // LIGHT  ☀" : "REALM // SHADOW  🌙";
+            GUIStyle rightStyle = new GUIStyle(hudStyle) { alignment = TextAnchor.MiddleCenter, fontSize = 17 };
+            rightStyle.normal.textColor = realmCol;
+            GUI.Label(realmCard, realmText, rightStyle);
         }
 
         // ==========================================

@@ -45,9 +45,11 @@ namespace LightNShadows.Editor
         private static void ImportMasterArtwork()
         {
             string bgSource = Path.Combine(BrainDir, ".user_uploaded/media_1790877488173.jpg");
+            string bgDaySource = Path.Combine(BrainDir, "cartoon_day_town_1790878418893.jpg");
             string logoSource = Path.Combine(BrainDir, "game_title_logo_1790875829034.jpg");
 
             string bgDest = $"{SpritesDir}/GameBackground.jpg";
+            string bgDayDest = $"{SpritesDir}/GameBackground_Day.jpg";
             string logoDest = $"{SpritesDir}/TitleLogo.jpg";
 
             if (File.Exists(bgSource))
@@ -55,6 +57,13 @@ namespace LightNShadows.Editor
                 File.Copy(bgSource, bgDest, true);
                 AssetDatabase.ImportAsset(bgDest);
                 ConfigureTextureAsSprite(bgDest, 100);
+            }
+
+            if (File.Exists(bgDaySource))
+            {
+                File.Copy(bgDaySource, bgDayDest, true);
+                AssetDatabase.ImportAsset(bgDayDest);
+                ConfigureTextureAsSprite(bgDayDest, 100);
             }
 
             if (File.Exists(logoSource))

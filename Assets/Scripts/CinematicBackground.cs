@@ -6,8 +6,14 @@ namespace LightNShadows
     {
         public static CinematicBackground Instance { get; private set; }
 
-        [Header("Master Artwork")]
-        [SerializeField] private SpriteRenderer bgRenderer;
+        [Header("Master Artworks")]
+        [SerializeField] private SpriteRenderer dayRenderer;
+        [SerializeField] private SpriteRenderer nightRenderer;
+
+        private float currentDayAlpha = 1f;
+        private float currentNightAlpha = 0f;
+        private float targetDayAlpha = 1f;
+        private float targetNightAlpha = 0f;
 
         private Transform playerTransform;
         private Camera targetCam;
@@ -43,61 +49,91 @@ namespace LightNShadows
             GameObject oldParallax = GameObject.Find("ParallaxBackdrop");
             if (oldParallax != null) oldParallax.SetActive(false);
 
+            // Clean up any old single-quad objects
+            Transform oldA = transform.Find("Backdrop_A");
+            if (oldA != null) Destroy(oldA.gameObject);
             Transform oldB = transform.Find("Backdrop_B");
             if (oldB != null) Destroy(oldB.gameObject);
 
-            Sprite bgSprite = LoadBackgroundSprite();
+            Sprite daySprite = LoadSprite("Assets/Sprites/GameBackground_Day.jpg");
+            Sprite nightSprite = LoadSprite("Assets/Sprites/GameBackground.jpg");
 
-            if (bgSprite != null)
+            // Setup Day Renderer (Morning Sunny Town)
+            if (daySprite != null)
             {
-                Transform transA = transform.Find("Backdrop_A");
-                GameObject quadA = (transA != null) ? transA.gameObject : new GameObject("Backdrop_A");
-                quadA.transform.SetParent(transform);
-                quadA.transform.position = new Vector3(0f, 0.2f, 5f);
+                Transform transDay = transform.Find("Backdrop_Day");
+                GameObject quadDay = (transDay != null) ? transDay.gameObject : new GameObject("Backdrop_Day");
+                quadDay.transform.SetParent(transform);
+                quadDay.transform.position = new Vector3(0f, 0.2f, 5f);
 
-                bgRenderer = quadA.GetComponent<SpriteRenderer>();
-                if (bgRenderer == null) bgRenderer = quadA.AddComponent<SpriteRenderer>();
-                bgRenderer.sprite = bgSprite;
-                bgRenderer.sortingOrder = -20; // Behind all gameplay elements
-
-                FitToScreen();
+                dayRenderer = quadDay.GetComponent<SpriteRenderer>();
+                if (dayRenderer == null) dayRenderer = quadDay.AddComponent<SpriteRenderer>();
+                dayRenderer.sprite = daySprite;
+                dayRenderer.sortingOrder = -20; // Base background layer
+                dayRenderer.color = new Color(1f, 1f, 1f, 1f);
             }
+
+            // Setup Night Renderer (Midnight Moonlit Town)
+            if (nightSprite != null)
+            {
+                Transform transNight = transform.Find("Backdrop_Night");
+                GameObject quadNight = (transNight != null) ? transNight.gameObject : new GameObject("Backdrop_Night");
+                quadNight.transform.SetParent(transform);
+                quadNight.transform.position = new Vector3(0f, 0.2f, 5f);
+
+                nightRenderer = quadNight.GetComponent<SpriteRenderer>();
+                if (nightRenderer == null) nightRenderer = quadNight.AddComponent<SpriteRenderer>();
+                nightRenderer.sprite = nightSprite;
+                nightRenderer.sortingOrder = -19; // Sits directly on top of Day layer for smooth crossfade
+                nightRenderer.color = new Color(1f, 1f, 1f, 0f);
+            }
+
+            FitToScreen();
         }
 
         private void FitToScreen()
         {
-            if (bgRenderer == null || bgRenderer.sprite == null) return;
             if (targetCam == null) targetCam = Camera.main;
             if (targetCam == null) return;
 
-            // Full visible dimensions of the orthographic camera
             float camHeight = 2f * targetCam.orthographicSize;
             float camWidth = camHeight * targetCam.aspect;
 
-            float spriteWidth = bgRenderer.sprite.bounds.size.x;
-            float spriteHeight = bgRenderer.sprite.bounds.size.y;
+            // Fit Day Quad
+            if (dayRenderer != null && dayRenderer.sprite != null)
+            {
+                float sw = dayRenderer.sprite.bounds.size.x;
+                float sh = dayRenderer.sprite.bounds.size.y;
+                if (sw > 0f && sh > 0f)
+                {
+                    float scale = Mathf.Max(camWidth / sw, camHeight / sh) * 1.25f;
+                    dayRenderer.transform.localScale = new Vector3(scale, scale, 1f);
+                }
+            }
 
-            if (spriteWidth <= 0f || spriteHeight <= 0f) return;
-
-            // Scale to cover the entire camera viewport with safety margin (ScaleAndCrop behavior)
-            // Extra margin ensures ZERO border gaps even on ultra-wide screens or Free Aspect
-            float scaleX = camWidth / spriteWidth;
-            float scaleY = camHeight / spriteHeight;
-            float coverScale = Mathf.Max(scaleX, scaleY) * 1.25f;
-
-            bgRenderer.transform.localScale = new Vector3(coverScale, coverScale, 1f);
+            // Fit Night Quad identically
+            if (nightRenderer != null && nightRenderer.sprite != null)
+            {
+                float sw = nightRenderer.sprite.bounds.size.x;
+                float sh = nightRenderer.sprite.bounds.size.y;
+                if (sw > 0f && sh > 0f)
+                {
+                    float scale = Mathf.Max(camWidth / sw, camHeight / sh) * 1.25f;
+                    nightRenderer.transform.localScale = new Vector3(scale, scale, 1f);
+                }
+            }
 
             lastAspect = targetCam.aspect;
             lastOrthoSize = targetCam.orthographicSize;
         }
 
-        private Sprite LoadBackgroundSprite()
+        private Sprite LoadSprite(string assetPath)
         {
 #if UNITY_EDITOR
-            Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/GameBackground.jpg");
+            Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
             if (s != null) return s;
 #endif
-            string fullPath = System.IO.Path.Combine(Application.dataPath, "Sprites/GameBackground.jpg");
+            string fullPath = System.IO.Path.Combine(Application.dataPath, assetPath.Replace("Assets/", ""));
             if (System.IO.File.Exists(fullPath))
             {
                 byte[] bytes = System.IO.File.ReadAllBytes(fullPath);
@@ -135,39 +171,65 @@ namespace LightNShadows
             {
                 HandleDimensionChanged(DimensionManager.Instance.CurrentDimension);
             }
+            else
+            {
+                // Default to Light dimension (Day)
+                targetDayAlpha = 1f;
+                targetNightAlpha = 0f;
+                currentDayAlpha = 1f;
+                currentNightAlpha = 0f;
+            }
         }
 
         private void Update()
         {
             if (targetCam == null) targetCam = Camera.main;
 
-            // If Game View aspect ratio changes (e.g. user resizes Free Aspect window), dynamically re-cover
+            // Handle dynamic window resizing (Free Aspect, 16:9, ultrawide)
             if (targetCam != null && (Mathf.Abs(targetCam.aspect - lastAspect) > 0.01f || Mathf.Abs(targetCam.orthographicSize - lastOrthoSize) > 0.01f))
             {
                 FitToScreen();
             }
 
-            if (bgRenderer == null) return;
+            // Smooth cinematic crossfade between Day and Night (0.2s transition)
+            currentDayAlpha = Mathf.MoveTowards(currentDayAlpha, targetDayAlpha, Time.deltaTime * 5f);
+            currentNightAlpha = Mathf.MoveTowards(currentNightAlpha, targetNightAlpha, Time.deltaTime * 5f);
 
-            // Subtle vertical parallax response when player jumps
+            if (dayRenderer != null)
+            {
+                dayRenderer.color = new Color(1f, 1f, 1f, currentDayAlpha);
+            }
+
+            if (nightRenderer != null)
+            {
+                nightRenderer.color = new Color(1f, 1f, 1f, currentNightAlpha);
+            }
+
+            // Subtle vertical depth parallax when player jumps
             if (playerTransform != null && GameManager.Instance != null && GameManager.Instance.IsPlaying)
             {
                 float jumpOffset = (playerTransform.position.y + 2.4f) * 0.05f;
                 float targetY = 0.2f + jumpOffset;
-                bgRenderer.transform.position = new Vector3(0f, Mathf.Lerp(bgRenderer.transform.position.y, targetY, Time.deltaTime * 6f), 5f);
+                float newY = Mathf.Lerp(transform.position.y, targetY, Time.deltaTime * 6f);
+                if (dayRenderer != null) dayRenderer.transform.position = new Vector3(0f, newY, 5f);
+                if (nightRenderer != null) nightRenderer.transform.position = new Vector3(0f, newY, 5f);
             }
         }
 
         private void HandleDimensionChanged(DimensionType dim)
         {
-            if (bgRenderer == null) return;
-
-            bool isLight = (dim == DimensionType.Light);
-            // Light Realm: Crisp moonlit blue brilliance
-            // Shadow Realm: Deep mysterious indigo-violet nocturnal mood
-            Color tint = isLight ? new Color(1.08f, 1.08f, 1.12f, 1f) : new Color(0.68f, 0.62f, 0.95f, 1f);
-
-            bgRenderer.color = tint;
+            if (dim == DimensionType.Light)
+            {
+                // Light Realm: Morning Sunny Town
+                targetDayAlpha = 1f;
+                targetNightAlpha = 0f;
+            }
+            else
+            {
+                // Shadow Realm: Midnight Moonlit Town
+                targetDayAlpha = 0f;
+                targetNightAlpha = 1f;
+            }
         }
     }
 }

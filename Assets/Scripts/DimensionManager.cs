@@ -13,8 +13,8 @@ namespace LightNShadows
 
         [Header("Camera & Background")]
         [SerializeField] private Camera targetCamera;
-        [SerializeField] private Color lightBackgroundColor = new Color(0.10f, 0.14f, 0.22f); // Dark midnight navy
-        [SerializeField] private Color shadowBackgroundColor = new Color(0.04f, 0.05f, 0.09f); // Deep dark obsidian
+        [SerializeField] private Color lightBackgroundColor = new Color(0.48f, 0.78f, 0.98f); // Bright morning sky
+        [SerializeField] private Color shadowBackgroundColor = new Color(0.04f, 0.05f, 0.09f); // Deep night obsidian
         [SerializeField] private float colorTransitionSpeed = 12f;
 
         [Header("Audio")]
