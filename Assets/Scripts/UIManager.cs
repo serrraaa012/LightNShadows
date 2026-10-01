@@ -334,72 +334,82 @@ namespace LightNShadows
             float midX = Screen.width * 0.5f;
             float midY = Screen.height * 0.5f;
 
-            float cardW = Mathf.Min(760f, Screen.width * 0.94f);
-            float cardH = Mathf.Min(520f, Screen.height * 0.90f);
+            float cardW = Mathf.Clamp(Screen.width * 0.90f, 620f, 780f);
+            float cardH = Mathf.Clamp(Screen.height * 0.88f, 460f, 520f);
             Rect panelRect = new Rect(midX - cardW * 0.5f, midY - cardH * 0.5f, cardW, cardH);
 
             DrawGlassPanel(panelRect);
 
-            // Header
+            // 1. Header & Subtitle
             headerStyle.normal.textColor = Color.white;
-            GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 38), "HOW TO PLAY", headerStyle);
+            GUI.Label(new Rect(panelRect.x, panelRect.y + 18, panelRect.width, 36), "HOW TO PLAY", headerStyle);
 
-            float startY = panelRect.y + 75f;
-            float subW = panelRect.width - 50f;
-            float subX = panelRect.x + 25f;
+            GUIStyle subHeader = new GUIStyle(cardBodyStyle)
+            {
+                font = displayFont,
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter
+            };
+            subHeader.normal.textColor = new Color(0.75f, 0.85f, 1f, 0.75f);
+            GUI.Label(new Rect(panelRect.x, panelRect.y + 52, panelRect.width, 22), "MASTER THE DUALITY OF LIGHT AND SHADOW", subHeader);
 
-            // 1. CRIMSON SPIKES
+            float startY = panelRect.y + 82f;
+            float subW = panelRect.width - 48f;
+            float subX = panelRect.x + 24f;
+            float itemH = 82f;
+
+            // 2. Directive Card 1: CRIMSON SPIKES
             DrawDirectiveCard(
-                new Rect(subX, startY, subW, 80),
+                new Rect(subX, startY, subW, itemH),
                 iconJumpTex,
-                new Color(1.5f, 0.2f, 0.32f),
-                "CRIMSON SPIKES  —  MUST JUMP",
-                "Red spikes are SOLID hazards in both Light and Shadow worlds. Phasing cannot bypass them!\n" +
-                "Action: Press [ W ] or [ UP ARROW ] to jump over.",
+                new Color(1.6f, 0.28f, 0.38f),
+                "CRIMSON SPIKES",
+                "JUMP:  Press [ W ] or [ UP ARROW ]",
+                "Solid hazard in all realms. Jump over to clear.",
                 "JUMP"
             );
 
-            // 2. REALM GATES
+            // 3. Directive Card 2: ENERGY GATES
             DrawDirectiveCard(
-                new Rect(subX, startY + 95, subW, 80),
+                new Rect(subX, startY + 94f, subW, itemH),
                 iconPhaseTex,
                 new Color(0.2f, 0.95f, 1.4f),
-                "TALL GATES  —  MUST PHASE",
-                "Imposing energy gates cannot be jumped. Shift into the OPPOSITE realm to ghost through safely!\n" +
-                "Action: Press [ SPACEBAR ] or [ CLICK ] to swap realms.",
+                "ENERGY GATES",
+                "PHASE:  Press [ SPACEBAR ] or [ CLICK ]",
+                "Cannot be jumped. Match opposite color to ghost through.",
                 "PHASE"
             );
 
-            // 3. COMBOS & ORBS
+            // 4. Directive Card 3: SCORING & COMBOS
             DrawDirectiveCard(
-                new Rect(subX, startY + 190, subW, 80),
+                new Rect(subX, startY + 188f, subW, itemH),
                 null,
-                new Color(1.3f, 0.85f, 0.2f),
-                "COMBOS & PRISM GEMS  —  SCORE BOOST",
-                "Consecutive phase passes increase your COMBO multiplier up to x5!\n" +
-                "Collect floating diamond Prism Orbs along the track for +1 bonus point.",
+                new Color(1.3f, 0.88f, 0.25f),
+                "SCORING & COMBOS",
+                "SCORE:  +1 per obstacle & Gem cleared",
+                "Chain safe phases to boost combo multiplier up to x5!",
                 "x5 BOOST"
             );
 
-            // Buttons
+            // 5. Action Buttons
             float btnW = 200f;
-            float btnH = 50f;
-            float bY = panelRect.y + panelRect.height - 70f;
+            float btnH = 48f;
+            float bY = panelRect.y + panelRect.height - 64f;
 
-            if (GUI.Button(new Rect(midX - btnW - 15, bY, btnW, btnH), "PLAY", buttonStyle))
+            if (GUI.Button(new Rect(midX - btnW - 14, bY, btnW, btnH), "PLAY", buttonStyle))
             {
                 GameManager.Instance.StartGame();
             }
 
-            if (GUI.Button(new Rect(midX + 15, bY, btnW, btnH), "BACK", buttonStyle))
+            if (GUI.Button(new Rect(midX + 14, bY, btnW, btnH), "BACK", buttonStyle))
             {
                 GameManager.Instance.OpenMainMenu();
             }
         }
 
-        private void DrawDirectiveCard(Rect r, Texture2D icon, Color accent, string title, string body, string tag)
+        private void DrawDirectiveCard(Rect r, Texture2D icon, Color accent, string title, string action, string rule, string tag)
         {
-            GUI.color = new Color(0.08f, 0.10f, 0.16f, 0.92f);
+            GUI.color = new Color(0.06f, 0.08f, 0.14f, 0.94f);
             GUI.DrawTexture(r, Texture2D.whiteTexture);
 
             // Accent left bar
@@ -407,28 +417,73 @@ namespace LightNShadows
             GUI.DrawTexture(new Rect(r.x, r.y, 4, r.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            float textLeft = r.x + 18;
+            float leftOffset = (icon != null) ? 68f : 20f;
+            float textLeft = r.x + leftOffset;
+
             if (icon != null)
             {
                 GUI.color = accent;
-                GUI.DrawTexture(new Rect(r.x + 14, r.y + 18, 44, 44), icon);
+                GUI.DrawTexture(new Rect(r.x + 14, r.y + (r.height - 42) * 0.5f, 42, 42), icon);
                 GUI.color = Color.white;
-                textLeft = r.x + 72;
             }
 
-            cardTitleStyle.normal.textColor = accent;
-            GUI.Label(new Rect(textLeft, r.y + 10, r.width - textLeft - 95, 24), title, cardTitleStyle);
+            float tagW = 90f;
+            float tagH = 34f;
+            float tagRightMargin = 14f;
+            // Correct relative width calculation:
+            float contentW = r.width - leftOffset - tagW - tagRightMargin - 16f;
 
-            GUI.Label(new Rect(textLeft, r.y + 34, r.width - textLeft - 95, 40), body, cardBodyStyle);
+            // 1. Title / Header
+            GUIStyle cardTitle = new GUIStyle(cardTitleStyle)
+            {
+                font = displayFont,
+                fontSize = 17,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                wordWrap = false
+            };
+            cardTitle.normal.textColor = accent;
+            GUI.Label(new Rect(textLeft, r.y + 9, contentW, 22), title, cardTitle);
 
-            GUIStyle tagStyle = new GUIStyle(cardTitleStyle) { alignment = TextAnchor.MiddleCenter, fontSize = 13 };
-            tagStyle.normal.textColor = Color.white;
+            // 2. Action Line (Bold White)
+            GUIStyle actStyle = new GUIStyle(cardBodyStyle)
+            {
+                font = displayFont,
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                wordWrap = false
+            };
+            actStyle.normal.textColor = Color.white;
+            GUI.Label(new Rect(textLeft, r.y + 33, contentW, 20), action, actStyle);
 
-            GUI.color = new Color(accent.r * 0.35f, accent.g * 0.35f, accent.b * 0.35f, 0.9f);
-            GUI.DrawTexture(new Rect(r.x + r.width - 92, r.y + 24, 80, 32), Texture2D.whiteTexture);
+            // 3. Rule Line (Legible Silver/Blue)
+            GUIStyle ruleStyle = new GUIStyle(cardBodyStyle)
+            {
+                fontSize = 13,
+                fontStyle = FontStyle.Normal,
+                alignment = TextAnchor.MiddleLeft,
+                wordWrap = false
+            };
+            ruleStyle.normal.textColor = new Color(0.78f, 0.85f, 0.95f);
+            GUI.Label(new Rect(textLeft, r.y + 55, contentW, 20), rule, ruleStyle);
+
+            // 4. Right Action Tag
+            Rect tagRect = new Rect(r.x + r.width - tagW - tagRightMargin, r.y + (r.height - tagH) * 0.5f, tagW, tagH);
+            GUI.color = new Color(accent.r * 0.28f, accent.g * 0.28f, accent.b * 0.28f, 0.95f);
+            GUI.DrawTexture(tagRect, Texture2D.whiteTexture);
+            GUI.color = accent;
+            DrawBorder(tagRect, 1.5f);
             GUI.color = Color.white;
 
-            GUI.Label(new Rect(r.x + r.width - 92, r.y + 24, 80, 32), tag, tagStyle);
+            GUIStyle tagStyle = new GUIStyle(cardTitleStyle)
+            {
+                font = displayFont,
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 13
+            };
+            tagStyle.normal.textColor = Color.white;
+            GUI.Label(tagRect, tag, tagStyle);
         }
 
         // ==========================================
