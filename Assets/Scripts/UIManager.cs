@@ -267,52 +267,45 @@ namespace LightNShadows
         // ==========================================
         private void DrawStartMenu()
         {
-            // Fullscreen Celestial Eclipse Artwork
-            DrawFullScreenBackdrop(new Color(0.02f, 0.03f, 0.06f, 0.40f));
+            Rect screenRect = new Rect(0, 0, Screen.width, Screen.height);
+
+            // 1. Fullscreen Dual-Realm Artwork with Stylish Light(N)Shadows Title
+            Texture2D menuBg = titleLogoTex ?? bgTex;
+            if (menuBg != null)
+            {
+                GUI.color = Color.white;
+                GUI.DrawTexture(screenRect, menuBg, ScaleMode.ScaleAndCrop);
+            }
+            else
+            {
+                DrawFullScreenBackdrop(new Color(0.02f, 0.03f, 0.06f, 0.40f));
+            }
+
+            // Soft atmospheric gradient shade across bottom for crystal-clear button visibility
+            float bottomShadeH = Screen.height * 0.42f;
+            Rect bottomShade = new Rect(0, Screen.height - bottomShadeH, Screen.width, bottomShadeH);
+            GUI.color = new Color(0.02f, 0.03f, 0.06f, 0.35f);
+            GUI.DrawTexture(bottomShade, Texture2D.whiteTexture);
+            GUI.color = Color.white;
 
             float midX = Screen.width * 0.5f;
-            float midY = Screen.height * 0.5f;
-
-            // 1. Sleek Typographic Title (No image on menu - clean and spacious!)
-            float titleY = midY - 140f;
-            Rect titleRect = new Rect(0, titleY, Screen.width, 70);
-
-            // Shadow
-            titleStyle.normal.textColor = new Color(0.02f, 0.03f, 0.08f, 0.95f);
-            GUI.Label(new Rect(2, titleY + 3, Screen.width, 70), "LIGHT   N   SHADOWS", titleStyle);
-
-            // Dual Glow Backlight
-            titleStyle.normal.textColor = new Color(0.2f, 0.9f, 1.4f, 0.55f);
-            GUI.Label(new Rect(-1, titleY - 1, Screen.width, 70), "LIGHT   N   SHADOWS", titleStyle);
-
-            // Crisp Front Title
-            titleStyle.normal.textColor = Color.white;
-            GUI.Label(titleRect, "LIGHT   N   SHADOWS", titleStyle);
-
-            // Sleek Dual Divider Bar: Solar Gold (Left) & Electric Cyan (Right)
-            float divHalf = 150f;
-            float divY = titleY + 68f;
-            GUI.color = new Color(1.3f, 0.88f, 0.25f, 0.85f); // Solar Gold
-            GUI.DrawTexture(new Rect(midX - divHalf, divY, divHalf, 2), Texture2D.whiteTexture);
-            GUI.color = new Color(0.2f, 0.95f, 1.4f, 0.85f);  // Electric Cyan
-            GUI.DrawTexture(new Rect(midX, divY, divHalf, 2), Texture2D.whiteTexture);
-            GUI.color = Color.white;
 
             // 2. High Score Ribbon Badge
             int best = (GameManager.Instance != null) ? GameManager.Instance.HighScore : 0;
             float badgeW = 280f;
-            float badgeH = 38f;
-            float badgeY = midY - 25f;
+            float badgeH = 36f;
+            float badgeY = Screen.height * 0.58f;
             Rect badgeRect = new Rect(midX - badgeW * 0.5f, badgeY, badgeW, badgeH);
 
-            GUI.color = new Color(0.06f, 0.08f, 0.14f, 0.92f);
+            GUI.color = new Color(0.04f, 0.06f, 0.12f, 0.90f);
             GUI.DrawTexture(badgeRect, Texture2D.whiteTexture);
             GUI.color = new Color(1.3f, 0.88f, 0.25f, 0.85f); // Solar Gold Rim
             DrawBorder(badgeRect, 1.5f);
             GUI.color = Color.white;
 
-            GUIStyle badgeStyle = new GUIStyle(GUI.skin.label)
+            GUIStyle badgeStyle = new GUIStyle(cardBodyStyle)
             {
+                font = displayFont,
                 fontSize = 15,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
@@ -321,16 +314,18 @@ namespace LightNShadows
             GUI.Label(badgeRect, $"★  RECORD: {best:N0} PTS  ★", badgeStyle);
 
             // 3. Action Buttons (Clean, responsive pill buttons)
-            float btnW = 300f;
-            float btnH = 56f;
+            float btnW = Mathf.Clamp(Screen.width * 0.26f, 260f, 320f);
+            float btnH = 54f;
             float btnX = midX - btnW * 0.5f;
+            float playBtnY = badgeY + 48f;
+            float howToBtnY = playBtnY + 64f;
 
-            if (GUI.Button(new Rect(btnX, midY + 45f, btnW, btnH), "PLAY", buttonStyle))
+            if (GUI.Button(new Rect(btnX, playBtnY, btnW, btnH), "PLAY", buttonStyle))
             {
                 GameManager.Instance.StartGame();
             }
 
-            if (GUI.Button(new Rect(btnX, midY + 118f, btnW, btnH), "HOW TO PLAY", buttonStyle))
+            if (GUI.Button(new Rect(btnX, howToBtnY, btnW, btnH), "HOW TO PLAY", buttonStyle))
             {
                 GameManager.Instance.OpenInstructions();
             }
@@ -578,10 +573,11 @@ namespace LightNShadows
         private void DrawFullScreenBackdrop(Color scrimColor)
         {
             Rect screenRect = new Rect(0, 0, Screen.width, Screen.height);
-            if (bgTex != null)
+            Texture2D backdrop = titleLogoTex ?? bgTex;
+            if (backdrop != null)
             {
                 GUI.color = Color.white;
-                GUI.DrawTexture(screenRect, bgTex, ScaleMode.ScaleAndCrop);
+                GUI.DrawTexture(screenRect, backdrop, ScaleMode.ScaleAndCrop);
             }
             else
             {
