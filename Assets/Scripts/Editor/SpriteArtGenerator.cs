@@ -327,13 +327,18 @@ namespace LightNShadows.Editor
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             float cornerRadius = 30f;
 
-            Color darkGlass = isHover 
-                ? new Color(0.20f, 0.25f, 0.42f, 0.96f) 
-                : new Color(0.08f, 0.10f, 0.17f, 0.94f);
+            // Vibrant Electric Neon Cyan Palette - Saturated cyber gradient (No more pale dark grey!)
+            Color baseDeep = isHover
+                ? new Color(0.08f, 0.34f, 0.56f, 0.98f)
+                : new Color(0.04f, 0.16f, 0.28f, 0.96f);
+
+            Color baseBright = isHover
+                ? new Color(0.16f, 0.58f, 0.90f, 1.0f)
+                : new Color(0.09f, 0.32f, 0.52f, 0.98f);
 
             Color borderGlow = isHover 
-                ? new Color(0.35f, 1.0f, 1.6f, 1f)
-                : new Color(0.25f, 0.8f, 1.1f, 0.75f);
+                ? new Color(0.40f, 1.15f, 1.65f, 1.0f) // Supercharged Neon Cyan
+                : new Color(0.28f, 0.85f, 1.25f, 0.92f); // Luminous Cyber Cyan
 
             for (int y = 0; y < h; y++)
             {
@@ -341,21 +346,47 @@ namespace LightNShadows.Editor
                 {
                     float distFromEdge = GetPillDistance(x, y, w, h, cornerRadius);
 
-                    if (distFromEdge > 0f)
+                    if (distFromEdge > 1.5f)
                     {
-                        tex.SetPixel(x, y, Color.clear);
+                        // Outer bloom aura! (0 to 4px outside pill)
+                        if (distFromEdge <= 4.0f)
+                        {
+                            float bloomAlpha = (1f - (distFromEdge - 1.5f) / 2.5f) * (isHover ? 0.35f : 0.18f);
+                            tex.SetPixel(x, y, new Color(borderGlow.r, borderGlow.g, borderGlow.b, bloomAlpha));
+                        }
+                        else
+                        {
+                            tex.SetPixel(x, y, Color.clear);
+                        }
+                    }
+                    else if (distFromEdge > -0.5f)
+                    {
+                        // Smooth anti-aliased outer edge
+                        float t = (distFromEdge + 0.5f) / 2.0f;
+                        Color c = Color.Lerp(borderGlow, new Color(borderGlow.r, borderGlow.g, borderGlow.b, 0.25f), t);
+                        tex.SetPixel(x, y, c);
                     }
                     else
                     {
                         float d = -distFromEdge;
                         if (d <= 2.5f)
                         {
+                            // Crisp neon border
                             tex.SetPixel(x, y, borderGlow);
                         }
                         else
                         {
+                            // Rich vertical gradient
                             float vertGrad = (float)y / h;
-                            Color fill = Color.Lerp(darkGlass * 0.9f, darkGlass * 1.15f, vertGrad);
+                            Color fill = Color.Lerp(baseDeep, baseBright, vertGrad);
+
+                            // Specular glass sheen highlight on upper 45%
+                            if (vertGrad > 0.52f)
+                            {
+                                float sheen = Mathf.Pow((vertGrad - 0.52f) / 0.48f, 1.2f) * (isHover ? 0.38f : 0.24f);
+                                fill = Color.Lerp(fill, Color.white, sheen);
+                            }
+
                             tex.SetPixel(x, y, fill);
                         }
                     }

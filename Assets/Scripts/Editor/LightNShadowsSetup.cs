@@ -12,6 +12,12 @@ namespace LightNShadows.Editor
         [InitializeOnLoadMethod]
         private static void OnEditorLoad()
         {
+            if (EditorPrefs.GetBool("LightNShadows_RegenSprites_v4", true))
+            {
+                EditorPrefs.SetBool("LightNShadows_RegenSprites_v4", false);
+                SpriteArtGenerator.GenerateAllSprites();
+            }
+
             EditorApplication.delayCall += () =>
             {
                 if (EditorPrefs.GetBool("LightNShadows_ResetScore_v1", true))
@@ -38,7 +44,20 @@ namespace LightNShadows.Editor
                     AssetDatabase.Refresh();
                     SetupSceneInternal(false);
                 }
+
+                if (EditorPrefs.GetBool("LightNShadows_RegenSprites_v3", true))
+                {
+                    EditorPrefs.SetBool("LightNShadows_RegenSprites_v3", false);
+                    SpriteArtGenerator.GenerateAllSprites();
+                }
             };
+        }
+
+        [MenuItem("Tools/LightNShadows/Regenerate Sprites")]
+        public static void RegenerateSprites()
+        {
+            SpriteArtGenerator.GenerateAllSprites();
+            Debug.Log("<color=cyan>[LightNShadows]</color> Sprites regenerated successfully with vibrant UI styling!");
         }
 
         [MenuItem("Tools/LightNShadows/Reset Best Score to 0")]

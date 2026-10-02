@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace LightNShadows
 {
@@ -35,6 +36,58 @@ namespace LightNShadows
         private bool showNameModal = false;
         private string inputPlayerName = "";
         private bool focusNameFieldNext = false;
+        private bool startGameOnConfirm = false;
+
+        // ==========================================
+        // CELESTIAL PRISM & STARBURST CLICK EFFECTS
+        // ==========================================
+        private enum CosmicParticleType
+        {
+            StarGlint,      // 4-point radiant rotating star
+            DiamondShard    // Faceted diamond rhombus crystal
+        }
+
+        private class CosmicSpark
+        {
+            public Vector2 position;
+            public Vector2 velocity;
+            public float rotation;
+            public float angularVelocity;
+            public float size;
+            public float life;
+            public float maxLife;
+            public Color color;
+            public CosmicParticleType particleType;
+        }
+
+        private class NovaRing
+        {
+            public Vector2 center;
+            public float currentRadius;
+            public float maxRadius;
+            public float life;
+            public float maxLife;
+            public Color color;
+        }
+
+        private class StarburstFlare
+        {
+            public Vector2 center;
+            public float currentSize;
+            public float targetSize;
+            public float life;
+            public float maxLife;
+            public Color color;
+        }
+
+        private readonly List<CosmicSpark> activeSparks = new List<CosmicSpark>();
+        private readonly List<NovaRing> activeNovaRings = new List<NovaRing>();
+        private readonly List<StarburstFlare> activeFlares = new List<StarburstFlare>();
+
+        private Texture2D starGlintTex;
+        private Texture2D diamondShardTex;
+        private Texture2D novaRingTex;
+        private Texture2D starburstFlareTex;
 
         private bool stylesInitialized = false;
 
@@ -227,6 +280,9 @@ namespace LightNShadows
             {
                 DrawNameModal();
             }
+
+            // Draw celestial starburst glints, prism crystals, and nova shockwaves
+            UpdateAndDrawCosmicEffects();
         }
 
         // ==========================================
@@ -320,17 +376,23 @@ namespace LightNShadows
 
             float midX = Screen.width * 0.5f;
 
-            // 2. High Score Ribbon Badge
+            // 2. High Score Ribbon Badge (Sleek rounded pill badge - NO harsh wireframe boxes)
             int best = (GameManager.Instance != null) ? GameManager.Instance.HighScore : 0;
             float badgeW = 280f;
             float badgeH = 34f;
             float badgeY = Screen.height * 0.53f;
             Rect badgeRect = new Rect(midX - badgeW * 0.5f, badgeY, badgeW, badgeH);
 
-            GUI.color = new Color(0.04f, 0.06f, 0.12f, 0.90f);
-            GUI.DrawTexture(badgeRect, Texture2D.whiteTexture);
-            GUI.color = new Color(1.3f, 0.88f, 0.25f, 0.85f); // Solar Gold Rim
-            DrawBorder(badgeRect, 1.5f);
+            if (buttonTex != null)
+            {
+                GUI.color = new Color(0.40f, 0.28f, 0.05f, 0.92f); // Deep solar gold rounded pill
+                GUI.DrawTexture(badgeRect, buttonTex);
+            }
+            else
+            {
+                GUI.color = new Color(0.12f, 0.09f, 0.04f, 0.90f);
+                GUI.DrawTexture(badgeRect, Texture2D.whiteTexture);
+            }
             GUI.color = Color.white;
 
             GUIStyle badgeStyle = new GUIStyle(cardBodyStyle)
@@ -340,19 +402,25 @@ namespace LightNShadows
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
-            badgeStyle.normal.textColor = new Color(1.3f, 0.88f, 0.25f);
+            badgeStyle.normal.textColor = new Color(1.4f, 0.95f, 0.35f);
             GUI.Label(badgeRect, $"★  RECORD: {best:N0} PTS  ★", badgeStyle);
 
-            // 3. Runner Profile Tag (Clickable to Edit Name)
-            float tagY = badgeY + 40f;
+            // 3. Runner Profile Tag (Clickable to Edit Name - Sleek rounded pill)
+            float tagY = badgeY + 42f;
             float tagH = 38f;
             Rect tagRect = new Rect(midX - badgeW * 0.5f, tagY, badgeW, tagH);
 
             bool isTagHover = tagRect.Contains(Event.current.mousePosition) && !showNameModal;
-            GUI.color = isTagHover ? new Color(0.12f, 0.16f, 0.26f, 0.95f) : new Color(0.04f, 0.06f, 0.12f, 0.90f);
-            GUI.DrawTexture(tagRect, Texture2D.whiteTexture);
-            GUI.color = isTagHover ? new Color(0.3f, 0.95f, 1.4f) : new Color(0.2f, 0.65f, 0.95f, 0.7f);
-            DrawBorder(tagRect, 1.5f);
+            if (buttonTex != null)
+            {
+                GUI.color = isTagHover ? new Color(0.15f, 0.40f, 0.65f, 0.98f) : new Color(0.08f, 0.20f, 0.35f, 0.92f);
+                GUI.DrawTexture(tagRect, buttonTex);
+            }
+            else
+            {
+                GUI.color = isTagHover ? new Color(0.12f, 0.22f, 0.35f, 0.95f) : new Color(0.06f, 0.12f, 0.20f, 0.90f);
+                GUI.DrawTexture(tagRect, Texture2D.whiteTexture);
+            }
             GUI.color = Color.white;
 
             string runnerTag = (GameManager.Instance != null && GameManager.Instance.HasPlayerName)
@@ -366,38 +434,33 @@ namespace LightNShadows
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
-            tagTextStyle.normal.textColor = isTagHover ? Color.white : new Color(0.85f, 0.92f, 1f);
+            tagTextStyle.normal.textColor = isTagHover ? new Color(0.40f, 1.15f, 1.65f) : new Color(0.90f, 0.95f, 1f);
             GUI.Label(tagRect, $"👤 RUNNER: {runnerTag}  ✎", tagTextStyle);
 
             if (GUI.Button(tagRect, GUIContent.none, GUIStyle.none) && !showNameModal)
             {
                 if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
+                SpawnCosmicClickEffect(Event.current.mousePosition != Vector2.zero ? Event.current.mousePosition : tagRect.center, new Color(0.2f, 0.9f, 1.4f));
+                startGameOnConfirm = false;
                 OpenNameModal();
             }
 
-            // 4. Action Buttons (Clean, responsive pill buttons)
+            // 4. Action Buttons (Clean rounded pill buttons - NO square boxes)
             float btnW = Mathf.Clamp(Screen.width * 0.26f, 260f, 320f);
             float btnH = 52f;
             float btnX = midX - btnW * 0.5f;
             float playBtnY = tagY + 48f;
-            float howToBtnY = playBtnY + 60f;
+            float howToBtnY = playBtnY + 62f;
 
-            if (GUI.Button(new Rect(btnX, playBtnY, btnW, btnH), "PLAY", buttonStyle) && !showNameModal)
+            if (DrawStyledButton(new Rect(btnX, playBtnY, btnW, btnH), "PLAY", ButtonTheme.PrimaryCyan, interactive: !showNameModal))
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
-                if (GameManager.Instance != null && !GameManager.Instance.HasPlayerName)
-                {
-                    OpenNameModal();
-                }
-                else
-                {
-                    GameManager.Instance.StartGame();
-                }
+                // Always ask for username every time the player clicks PLAY!
+                startGameOnConfirm = true;
+                OpenNameModal();
             }
 
-            if (GUI.Button(new Rect(btnX, howToBtnY, btnW, btnH), "HOW TO PLAY", buttonStyle) && !showNameModal)
+            if (DrawStyledButton(new Rect(btnX, howToBtnY, btnW, btnH), "HOW TO PLAY", ButtonTheme.SecondaryIndigo, interactive: !showNameModal))
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.OpenInstructions();
             }
         }
@@ -428,6 +491,10 @@ namespace LightNShadows
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.SetPlayerName(cleanName);
+                if (startGameOnConfirm)
+                {
+                    GameManager.Instance.StartGame();
+                }
             }
 
             showNameModal = false;
@@ -470,7 +537,7 @@ namespace LightNShadows
                 alignment = TextAnchor.MiddleCenter
             };
             subStyle.normal.textColor = new Color(0.75f, 0.85f, 0.98f);
-            GUI.Label(new Rect(modalRect.x, modalRect.y + 64, modalRect.width, 22), "Choose your runner callsign for the leaderboard", subStyle);
+            GUI.Label(new Rect(modalRect.x, modalRect.y + 64, modalRect.width, 22), "Returning runner continues record. New runner starts at 0 pts.", subStyle);
 
             // 3. Stylized Input Box Container
             float inputW = cardW - 70f;
@@ -522,38 +589,24 @@ namespace LightNShadows
                 Event.current.Use();
             }
 
-            // 4. Action Buttons
-            bool hasExistingName = GameManager.Instance != null && GameManager.Instance.HasPlayerName;
+            // 4. Action Buttons (CANCEL on left, CONFIRM/PLAY on right)
             float btnH = 46f;
             float btnY = modalRect.y + 180f;
+            float bW = 160f;
+            float gap = 16f;
+            float leftBtnX = midX - bW - gap * 0.5f;
+            float rightBtnX = midX + gap * 0.5f;
 
-            if (hasExistingName)
+            string confirmLabel = startGameOnConfirm ? "PLAY NOW" : "CONFIRM";
+
+            if (DrawStyledButton(new Rect(leftBtnX, btnY, bW, btnH), "CANCEL", ButtonTheme.SecondaryIndigo))
             {
-                // Two buttons: CONFIRM (right) and CANCEL (left)
-                float bW = 160f;
-                float gap = 16f;
-                float leftBtnX = midX - bW - gap * 0.5f;
-                float rightBtnX = midX + gap * 0.5f;
-
-                if (GUI.Button(new Rect(leftBtnX, btnY, bW, btnH), "CANCEL", buttonStyle))
-                {
-                    if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
-                    showNameModal = false;
-                }
-
-                if (GUI.Button(new Rect(rightBtnX, btnY, bW, btnH), "CONFIRM", buttonStyle))
-                {
-                    ConfirmPlayerName();
-                }
+                showNameModal = false;
             }
-            else
+
+            if (DrawStyledButton(new Rect(rightBtnX, btnY, bW, btnH), confirmLabel, ButtonTheme.PrimaryCyan))
             {
-                // Single prominent CONFIRM button
-                float bW = 220f;
-                if (GUI.Button(new Rect(midX - bW * 0.5f, btnY, bW, btnH), "CONFIRM", buttonStyle))
-                {
-                    ConfirmPlayerName();
-                }
+                ConfirmPlayerName();
             }
 
             // Helper hint at the bottom
@@ -563,7 +616,7 @@ namespace LightNShadows
                 alignment = TextAnchor.MiddleCenter
             };
             hintStyle.normal.textColor = new Color(0.5f, 0.6f, 0.75f);
-            GUI.Label(new Rect(modalRect.x, modalRect.y + cardH - 32, modalRect.width, 22), "Max 14 characters  •  Press [ ENTER ] to confirm", hintStyle);
+            GUI.Label(new Rect(modalRect.x, modalRect.y + cardH - 32, modalRect.width, 22), "Max 14 characters  •  Press [ ENTER ] to play", hintStyle);
         }
 
         // ==========================================
@@ -633,20 +686,19 @@ namespace LightNShadows
                 "SCORE"
             );
 
-            // 5. Action Buttons
+            // 5. Action Buttons (Vibrant styled buttons)
             float btnW = 200f;
             float btnH = 48f;
             float bY = panelRect.y + panelRect.height - 64f;
 
-            if (GUI.Button(new Rect(midX - btnW - 14, bY, btnW, btnH), "PLAY", buttonStyle))
+            if (DrawStyledButton(new Rect(midX - btnW - 14, bY, btnW, btnH), "PLAY", ButtonTheme.PrimaryCyan))
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
-                GameManager.Instance.StartGame();
+                startGameOnConfirm = true;
+                OpenNameModal();
             }
 
-            if (GUI.Button(new Rect(midX + 14, bY, btnW, btnH), "BACK", buttonStyle))
+            if (DrawStyledButton(new Rect(midX + 14, bY, btnW, btnH), "BACK", ButtonTheme.SecondaryIndigo))
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.OpenMainMenu();
             }
         }
@@ -764,29 +816,26 @@ namespace LightNShadows
             runnerStyle.normal.textColor = new Color(0.3f, 0.95f, 1.4f, 0.95f);
             GUI.Label(new Rect(scoreX, scoreY + 59, 300, 22), $"RUNNER: {pName}", runnerStyle);
 
-            // 4. CORNER PAUSE BUTTON (Top-Right)
+            // 4. CORNER PAUSE BUTTON (Top-Right - High-tech cyber pause button)
             float pauseSize = 44f;
             Rect pauseRect = new Rect(Screen.width - pauseSize - 22f, 20f, pauseSize, pauseSize);
 
-            // Interaction
-            if (GUI.Button(pauseRect, GUIContent.none, GUIStyle.none))
+            bool isPauseHover = pauseRect.Contains(Event.current.mousePosition);
+
+            if (buttonTex != null)
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
-                GameManager.Instance.PauseGame();
+                GUI.color = isPauseHover ? new Color(0.15f, 0.45f, 0.70f, 0.98f) : new Color(0.08f, 0.20f, 0.35f, 0.90f);
+                GUI.DrawTexture(pauseRect, buttonTex);
             }
-
-            bool isHover = pauseRect.Contains(Event.current.mousePosition);
-            Color btnBg = isHover ? new Color(0.18f, 0.22f, 0.32f, 0.95f) : new Color(0.06f, 0.08f, 0.14f, 0.85f);
-            GUI.color = btnBg;
-            GUI.DrawTexture(pauseRect, Texture2D.whiteTexture);
-
-            // Glow border on hover
-            Color borderCol = isHover ? new Color(0.3f, 0.9f, 1.2f, 1f) : new Color(0.45f, 0.65f, 0.85f, 0.5f);
-            GUI.color = borderCol;
-            DrawBorder(pauseRect, 2f);
+            else
+            {
+                GUI.color = isPauseHover ? new Color(0.12f, 0.35f, 0.55f, 0.98f) : new Color(0.04f, 0.14f, 0.24f, 0.90f);
+                GUI.DrawTexture(pauseRect, Texture2D.whiteTexture);
+            }
+            GUI.color = Color.white;
 
             // Draw crisp pause bars (||)
-            Color barCol = isHover ? Color.white : new Color(0.9f, 0.95f, 1f, 0.95f);
+            Color barCol = isPauseHover ? Color.white : new Color(0.9f, 0.95f, 1f, 0.95f);
             GUI.color = barCol;
             float barW = 5f;
             float barH = 18f;
@@ -798,6 +847,14 @@ namespace LightNShadows
             GUI.DrawTexture(new Rect(startBarX, barY, barW, barH), Texture2D.whiteTexture);
             GUI.DrawTexture(new Rect(startBarX + barW + barGap, barY, barW, barH), Texture2D.whiteTexture);
             GUI.color = Color.white;
+
+            // Interaction
+            if (GUI.Button(pauseRect, GUIContent.none, GUIStyle.none))
+            {
+                SpawnCosmicClickEffect(pauseRect.center, new Color(0.2f, 0.9f, 1.4f));
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
+                GameManager.Instance.PauseGame();
+            }
         }
 
         // ==========================================
@@ -851,26 +908,23 @@ namespace LightNShadows
             string pauseRunner = (GameManager.Instance != null && GameManager.Instance.HasPlayerName) ? GameManager.Instance.PlayerName : "RUNNER";
             GUI.Label(boxRect, $"{pauseRunner}   |   SCORE: {GameManager.Instance.CurrentScore:N0}   |   BEST: {GameManager.Instance.HighScore:N0}", scoreSummaryStyle);
 
-            // 3. Action Buttons
+            // 3. Action Buttons (Vibrant styled buttons)
             float btnW = 260f;
             float btnH = 46f;
             float btnX = midX - btnW * 0.5f;
 
-            if (GUI.Button(new Rect(btnX, panelRect.y + 164, btnW, btnH), "RESUME", buttonStyle))
+            if (DrawStyledButton(new Rect(btnX, panelRect.y + 164, btnW, btnH), "RESUME", ButtonTheme.PrimaryCyan))
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.ResumeGame();
             }
 
-            if (GUI.Button(new Rect(btnX, panelRect.y + 224, btnW, btnH), "RESTART", buttonStyle))
+            if (DrawStyledButton(new Rect(btnX, panelRect.y + 224, btnW, btnH), "RESTART", ButtonTheme.SecondaryIndigo))
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.RestartGame();
             }
 
-            if (GUI.Button(new Rect(btnX, panelRect.y + 284, btnW, btnH), "MAIN MENU", buttonStyle))
+            if (DrawStyledButton(new Rect(btnX, panelRect.y + 284, btnW, btnH), "MAIN MENU", ButtonTheme.SecondaryIndigo))
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.OpenMainMenu();
             }
         }
@@ -902,19 +956,18 @@ namespace LightNShadows
             overTitle.normal.textColor = new Color(1.5f, 0.2f, 0.32f); // Luminous Crimson
             GUI.Label(new Rect(panelRect.x, panelRect.y + 32, panelRect.width, 55), "GAME OVER", overTitle);
 
-            string overRunner = (GameManager.Instance != null && GameManager.Instance.HasPlayerName) ? GameManager.Instance.PlayerName : "RUNNER";
-
             // 2. High Score Celebration or Divider
             if (GameManager.Instance.IsNewHighScore)
             {
                 GUIStyle recordStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 17,
+                    font = displayFont,
+                    fontSize = 18,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter
                 };
                 recordStyle.normal.textColor = new Color(1.3f, 0.88f, 0.25f); // Solar Gold
-                GUI.Label(new Rect(panelRect.x, panelRect.y + 92, panelRect.width, 28), $"★ NEW RECORD BY {overRunner.ToUpper()}! ★", recordStyle);
+                GUI.Label(new Rect(panelRect.x, panelRect.y + 92, panelRect.width, 28), "★ NEW RECORD! ★", recordStyle);
             }
             else
             {
@@ -934,7 +987,8 @@ namespace LightNShadows
 
             GUIStyle scoreValStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 32,
+                font = displayFont,
+                fontSize = 34,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
@@ -943,34 +997,440 @@ namespace LightNShadows
 
             GUIStyle statLine = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 15,
+                font = displayFont,
+                fontSize = 16,
                 fontStyle = FontStyle.Normal,
                 alignment = TextAnchor.MiddleCenter
             };
             statLine.normal.textColor = new Color(0.7f, 0.8f, 0.95f);
-            GUI.Label(new Rect(boxRect.x, boxRect.y + 60, boxRect.width, 28), $"RUNNER: {overRunner}   |   BEST: {GameManager.Instance.HighScore:N0} PTS", statLine);
+            GUI.Label(new Rect(boxRect.x, boxRect.y + 60, boxRect.width, 28), $"BEST: {GameManager.Instance.HighScore:N0} PTS", statLine);
 
-            // 4. Action Buttons
+            // 4. Action Buttons (Vibrant styled buttons with neon glow and glass sheen)
             float btnW = 280f;
             float btnH = 50f;
             float btnX = midX - btnW * 0.5f;
 
-            if (GUI.Button(new Rect(btnX, panelRect.y + 250, btnW, btnH), "PLAY AGAIN", buttonStyle))
+            if (DrawStyledButton(new Rect(btnX, panelRect.y + 250, btnW, btnH), "PLAY AGAIN", ButtonTheme.PrimaryCyan))
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.RestartGame();
             }
 
-            if (GUI.Button(new Rect(btnX, panelRect.y + 318, btnW, btnH), "MAIN MENU", buttonStyle))
+            if (DrawStyledButton(new Rect(btnX, panelRect.y + 318, btnW, btnH), "MAIN MENU", ButtonTheme.SecondaryIndigo))
             {
-                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.OpenMainMenu();
             }
         }
 
         // ==========================================
-        // HELPERS
+        // HELPERS & STYLED BUTTONS
         // ==========================================
+        public enum ButtonTheme
+        {
+            PrimaryCyan,
+            SecondaryIndigo,
+            CrimsonAlert,
+            SolarGold
+        }
+
+        private bool DrawStyledButton(Rect rect, string text, ButtonTheme theme = ButtonTheme.PrimaryCyan, bool interactive = true)
+        {
+            bool isHover = interactive && rect.Contains(Event.current.mousePosition);
+
+            // 1. Text color and particle effect color
+            Color textColor;
+            Color effectColor;
+
+            switch (theme)
+            {
+                case ButtonTheme.SecondaryIndigo:
+                    textColor = isHover ? new Color(1f, 0.95f, 1f) : new Color(0.90f, 0.88f, 1f);
+                    effectColor = new Color(0.6f, 0.45f, 1.2f);
+                    break;
+
+                case ButtonTheme.CrimsonAlert:
+                    textColor = isHover ? new Color(1f, 0.92f, 0.94f) : Color.white;
+                    effectColor = new Color(1.3f, 0.2f, 0.35f);
+                    break;
+
+                case ButtonTheme.SolarGold:
+                    textColor = isHover ? Color.white : new Color(1f, 0.95f, 0.85f);
+                    effectColor = new Color(1.3f, 0.85f, 0.2f);
+                    break;
+
+                case ButtonTheme.PrimaryCyan:
+                default:
+                    textColor = isHover ? new Color(0.35f, 1.15f, 1.6f) : Color.white;
+                    effectColor = new Color(0.25f, 0.95f, 1.4f);
+                    break;
+            }
+
+            // 2. Click press offset (subtle responsive tactile sink on press)
+            Rect drawRect = rect;
+            if (isHover && Event.current.type == EventType.MouseDown && Event.current.button == 0)
+            {
+                drawRect.y += 2f;
+            }
+
+            // 3. Draw Clean Rounded Pill Texture (NO square box or wireframe outline!)
+            Texture2D bodyTex = isHover ? (buttonHoverTex ?? buttonTex) : buttonTex;
+            if (bodyTex != null)
+            {
+                GUI.color = Color.white;
+                GUI.DrawTexture(drawRect, bodyTex);
+            }
+            else
+            {
+                GUI.color = new Color(0.08f, 0.32f, 0.52f, 0.95f);
+                GUI.DrawTexture(drawRect, Texture2D.whiteTexture);
+            }
+            GUI.color = Color.white;
+
+            // 4. High-Contrast Typography with Double Drop-Shadow
+            int fontSize = Mathf.RoundToInt(drawRect.height * 0.40f);
+            GUIStyle btnLabel = new GUIStyle(GUI.skin.label)
+            {
+                font = displayFont,
+                fontSize = fontSize,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+
+            // Deep Drop Shadow
+            btnLabel.normal.textColor = new Color(0.01f, 0.02f, 0.04f, 0.95f);
+            GUI.Label(new Rect(drawRect.x + 1.5f, drawRect.y + 2f, drawRect.width, drawRect.height), text, btnLabel);
+
+            // Crisp Main Text
+            btnLabel.normal.textColor = textColor;
+            GUI.Label(drawRect, text, btnLabel);
+
+            // 5. Interaction Trigger with Celestial Click Effect!
+            if (!interactive) return false;
+
+            bool clicked = GUI.Button(rect, GUIContent.none, GUIStyle.none);
+            if (clicked)
+            {
+                Vector2 clickPos = Event.current.mousePosition;
+                if (clickPos == Vector2.zero || !rect.Contains(clickPos))
+                {
+                    clickPos = rect.center;
+                }
+
+                SpawnCosmicClickEffect(clickPos, effectColor);
+
+                if (SoundManager.Instance != null)
+                {
+                    SoundManager.Instance.PlayButtonClick();
+                }
+            }
+
+            return clicked;
+        }
+
+        // ==========================================
+        // CELESTIAL PRISM & STARBURST CLICK EFFECTS
+        // ==========================================
+        private void EnsureCosmicTextures()
+        {
+            if (starGlintTex != null && diamondShardTex != null && novaRingTex != null && starburstFlareTex != null) return;
+
+            // 1. Procedural 4-Point Radiant Star Glint (64x64)
+            int sSize = 64;
+            starGlintTex = new Texture2D(sSize, sSize, TextureFormat.RGBA32, false);
+            starGlintTex.wrapMode = TextureWrapMode.Clamp;
+            Vector2 sCenter = new Vector2(sSize * 0.5f, sSize * 0.5f);
+            float maxR = sSize * 0.48f;
+
+            for (int y = 0; y < sSize; y++)
+            {
+                for (int x = 0; x < sSize; x++)
+                {
+                    float dx = x - sCenter.x;
+                    float dy = y - sCenter.y;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    // Central glowing core
+                    float core = Mathf.Pow(Mathf.Clamp01(1f - (dist / (maxR * 0.30f))), 2f) * 0.95f;
+
+                    // Sharp horizontal beam
+                    float hBeam = Mathf.Pow(Mathf.Clamp01(1f - (Mathf.Abs(dx) / maxR)), 1.4f) *
+                                  Mathf.Pow(Mathf.Clamp01(1f - (Mathf.Abs(dy) / 4.2f)), 2.2f);
+
+                    // Sharp vertical beam
+                    float vBeam = Mathf.Pow(Mathf.Clamp01(1f - (Mathf.Abs(dy) / maxR)), 1.4f) *
+                                  Mathf.Pow(Mathf.Clamp01(1f - (Mathf.Abs(dx) / 4.2f)), 2.2f);
+
+                    // Soft diagonal cross
+                    float diag1 = Mathf.Pow(Mathf.Clamp01(1f - (dist / (maxR * 0.55f))), 2f) *
+                                  Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dx - dy) / 6f), 2f) * 0.45f;
+                    float diag2 = Mathf.Pow(Mathf.Clamp01(1f - (dist / (maxR * 0.55f))), 2f) *
+                                  Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dx + dy) / 6f), 2f) * 0.45f;
+
+                    float alpha = Mathf.Clamp01(core + hBeam + vBeam + diag1 + diag2);
+                    starGlintTex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            starGlintTex.Apply();
+
+            // 2. Procedural Faceted Diamond Prism Crystal Shard (48x48)
+            int dSize = 48;
+            diamondShardTex = new Texture2D(dSize, dSize, TextureFormat.RGBA32, false);
+            diamondShardTex.wrapMode = TextureWrapMode.Clamp;
+            Vector2 dCenter = new Vector2(dSize * 0.5f, dSize * 0.5f);
+            float hw = dSize * 0.26f;
+            float hh = dSize * 0.46f;
+
+            for (int y = 0; y < dSize; y++)
+            {
+                for (int x = 0; x < dSize; x++)
+                {
+                    float dx = x - dCenter.x;
+                    float dy = y - dCenter.y;
+
+                    // Rhombus equation: |dx|/hw + |dy|/hh <= 1
+                    float d = (Mathf.Abs(dx) / hw) + (Mathf.Abs(dy) / hh);
+                    if (d > 1f)
+                    {
+                        diamondShardTex.SetPixel(x, y, Color.clear);
+                        continue;
+                    }
+
+                    // Anti-aliased outer edge
+                    float edgeAlpha = Mathf.Clamp01((1f - d) / 0.12f);
+
+                    // Faceted jewel shading: bright specular facet on top-left
+                    float facetShade = (dx < 0f) ? 1.0f : 0.78f;
+                    if (dy > 0f) facetShade += 0.16f;
+                    float rim = Mathf.Pow(d, 2.5f) * 0.4f;
+                    float brightness = Mathf.Clamp01(facetShade + rim);
+
+                    diamondShardTex.SetPixel(x, y, new Color(brightness, brightness, brightness, edgeAlpha * 0.95f));
+                }
+            }
+            diamondShardTex.Apply();
+
+            // 3. Procedural Concentric Nova Ripple Ring (128x128)
+            int rSize = 128;
+            novaRingTex = new Texture2D(rSize, rSize, TextureFormat.RGBA32, false);
+            novaRingTex.wrapMode = TextureWrapMode.Clamp;
+            Vector2 rCenter = new Vector2(rSize * 0.5f, rSize * 0.5f);
+            float rTarget = rSize * 0.44f;
+            float rThick = 4.2f;
+
+            for (int y = 0; y < rSize; y++)
+            {
+                for (int x = 0; x < rSize; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), rCenter);
+                    float delta = Mathf.Abs(dist - rTarget);
+                    if (delta <= rThick)
+                    {
+                        float a = Mathf.Clamp01(1f - (delta / rThick));
+                        novaRingTex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                    }
+                    else
+                    {
+                        novaRingTex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            novaRingTex.Apply();
+
+            // 4. Procedural 8-Point Diffraction Starburst Flare (128x128)
+            int fSize = 128;
+            starburstFlareTex = new Texture2D(fSize, fSize, TextureFormat.RGBA32, false);
+            starburstFlareTex.wrapMode = TextureWrapMode.Clamp;
+            Vector2 fCenter = new Vector2(fSize * 0.5f, fSize * 0.5f);
+            float fR = fSize * 0.48f;
+
+            for (int y = 0; y < fSize; y++)
+            {
+                for (int x = 0; x < fSize; x++)
+                {
+                    float dx = x - fCenter.x;
+                    float dy = y - fCenter.y;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    // Central luminous core
+                    float core = Mathf.Pow(Mathf.Clamp01(1f - (dist / (fR * 0.35f))), 2.2f);
+
+                    // Primary cross spikes
+                    float hSpike = Mathf.Pow(Mathf.Clamp01(1f - (Mathf.Abs(dx) / fR)), 1.2f) *
+                                   Mathf.Pow(Mathf.Clamp01(1f - (Mathf.Abs(dy) / 4f)), 2f);
+                    float vSpike = Mathf.Pow(Mathf.Clamp01(1f - (Mathf.Abs(dy) / fR)), 1.2f) *
+                                   Mathf.Pow(Mathf.Clamp01(1f - (Mathf.Abs(dx) / 4f)), 2f);
+
+                    // Diagonal 45 deg spikes
+                    float diag1 = Mathf.Pow(Mathf.Clamp01(1f - (dist / (fR * 0.70f))), 1.5f) *
+                                  Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dx - dy) / 5.5f), 2f) * 0.55f;
+                    float diag2 = Mathf.Pow(Mathf.Clamp01(1f - (dist / (fR * 0.70f))), 1.5f) *
+                                  Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dx + dy) / 5.5f), 2f) * 0.55f;
+
+                    float alpha = Mathf.Clamp01(core * 0.95f + (hSpike + vSpike) * 0.9f + diag1 + diag2);
+                    starburstFlareTex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            starburstFlareTex.Apply();
+        }
+
+        public void SpawnCosmicClickEffect(Vector2 origin, Color themeColor)
+        {
+            EnsureCosmicTextures();
+
+            // 1. Instant Center Starburst Flare
+            activeFlares.Add(new StarburstFlare
+            {
+                center = origin,
+                currentSize = 28f,
+                targetSize = 92f,
+                life = 0.22f,
+                maxLife = 0.22f,
+                color = Color.Lerp(themeColor, Color.white, 0.45f)
+            });
+
+            // 2. Expanding Celestial Nova Shockwaves
+            activeNovaRings.Add(new NovaRing
+            {
+                center = origin,
+                currentRadius = 10f,
+                maxRadius = 65f,
+                life = 0.24f,
+                maxLife = 0.24f,
+                color = Color.white
+            });
+
+            activeNovaRings.Add(new NovaRing
+            {
+                center = origin,
+                currentRadius = 16f,
+                maxRadius = 110f,
+                life = 0.38f,
+                maxLife = 0.38f,
+                color = themeColor
+            });
+
+            // 3. Radial Burst of 14-18 Rotating Star Glints & Prism Diamond Crystals
+            // Theme colors: Solar Gold (Light), Lunar Cyan (Shadow), and Radiant White
+            Color solarGold = new Color(1.0f, 0.88f, 0.28f);
+            Color lunarCyan = new Color(0.22f, 0.92f, 1.0f);
+            Color starlightWhite = new Color(1.0f, 1.0f, 1.0f);
+
+            int count = Random.Range(14, 18);
+            for (int i = 0; i < count; i++)
+            {
+                float baseAngle = (i * (360f / count)) + Random.Range(-12f, 12f);
+                float rad = baseAngle * Mathf.Deg2Rad;
+                Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+                float speed = Random.Range(130f, 380f);
+
+                // Alternating celestial colors: theme, gold, cyan, white
+                Color sparkColor;
+                int colMod = i % 4;
+                if (colMod == 0) sparkColor = starlightWhite;
+                else if (colMod == 1) sparkColor = solarGold;
+                else if (colMod == 2) sparkColor = lunarCyan;
+                else sparkColor = themeColor;
+
+                CosmicParticleType pType = (i % 2 == 0) ? CosmicParticleType.StarGlint : CosmicParticleType.DiamondShard;
+
+                activeSparks.Add(new CosmicSpark
+                {
+                    position = origin + dir * Random.Range(4f, 14f),
+                    velocity = dir * speed,
+                    rotation = Random.Range(0f, 360f),
+                    angularVelocity = Random.Range(-320f, 320f),
+                    size = (pType == CosmicParticleType.StarGlint) ? Random.Range(20f, 36f) : Random.Range(16f, 30f),
+                    life = Random.Range(0.38f, 0.58f),
+                    maxLife = 0.58f,
+                    color = sparkColor,
+                    particleType = pType
+                });
+            }
+        }
+
+        private void UpdateAndDrawCosmicEffects()
+        {
+            EnsureCosmicTextures();
+            float dt = Time.unscaledDeltaTime;
+            if (dt <= 0f || dt > 0.1f) dt = 0.016f;
+
+            Matrix4x4 origMatrix = GUI.matrix;
+
+            // 1. Draw Nova Shockwave Rings
+            for (int i = activeNovaRings.Count - 1; i >= 0; i--)
+            {
+                var r = activeNovaRings[i];
+                r.life -= dt;
+                if (r.life <= 0f)
+                {
+                    activeNovaRings.RemoveAt(i);
+                    continue;
+                }
+
+                float progress = 1f - (r.life / r.maxLife);
+                float radius = Mathf.Lerp(r.currentRadius, r.maxRadius, Mathf.Sin(progress * Mathf.PI * 0.5f));
+                float alpha = (1f - progress) * 0.88f;
+
+                Rect rRect = new Rect(r.center.x - radius, r.center.y - radius, radius * 2f, radius * 2f);
+                GUI.color = new Color(r.color.r, r.color.g, r.color.b, alpha);
+                GUI.DrawTexture(rRect, novaRingTex);
+            }
+
+            // 2. Draw Center Starburst Flares
+            for (int i = activeFlares.Count - 1; i >= 0; i--)
+            {
+                var f = activeFlares[i];
+                f.life -= dt;
+                if (f.life <= 0f)
+                {
+                    activeFlares.RemoveAt(i);
+                    continue;
+                }
+
+                float progress = 1f - (f.life / f.maxLife);
+                float size = Mathf.Lerp(f.currentSize, f.targetSize, Mathf.Sin(progress * Mathf.PI * 0.5f));
+                float alpha = Mathf.Clamp01(1f - progress) * 0.95f;
+
+                Rect fRect = new Rect(f.center.x - size * 0.5f, f.center.y - size * 0.5f, size, size);
+                GUI.color = new Color(f.color.r, f.color.g, f.color.b, alpha);
+                GUI.DrawTexture(fRect, starburstFlareTex);
+            }
+
+            // 3. Draw Rotating Star Glints & Prism Diamond Crystals
+            for (int i = activeSparks.Count - 1; i >= 0; i--)
+            {
+                var s = activeSparks[i];
+                s.life -= dt;
+                if (s.life <= 0f)
+                {
+                    activeSparks.RemoveAt(i);
+                    continue;
+                }
+
+                // Physics motion: velocity + aerodynamic deceleration drag
+                s.position += s.velocity * dt;
+                s.velocity *= Mathf.Pow(0.85f, dt * 60f); // drag
+                s.rotation += s.angularVelocity * dt;
+
+                float progress = 1f - (s.life / s.maxLife);
+                // Celestial scale curve: quick bloom then smooth tapering
+                float scale = (progress < 0.18f)
+                    ? Mathf.Lerp(0.4f, 1.15f, progress / 0.18f)
+                    : Mathf.Lerp(1.15f, 0.25f, (progress - 0.18f) / 0.82f);
+                float renderSize = s.size * scale;
+                float alpha = Mathf.Clamp01((1f - progress) * 1.35f);
+
+                Rect sRect = new Rect(s.position.x - renderSize * 0.5f, s.position.y - renderSize * 0.5f, renderSize, renderSize);
+
+                GUIUtility.RotateAroundPivot(s.rotation, s.position);
+                GUI.color = new Color(s.color.r, s.color.g, s.color.b, alpha);
+                Texture2D texToDraw = (s.particleType == CosmicParticleType.StarGlint) ? starGlintTex : diamondShardTex;
+                GUI.DrawTexture(sRect, texToDraw);
+                GUI.matrix = origMatrix;
+            }
+
+            GUI.color = Color.white;
+        }
+
         private void DrawFullScreenBackdrop(Color scrimColor)
         {
             Rect screenRect = new Rect(0, 0, Screen.width, Screen.height);

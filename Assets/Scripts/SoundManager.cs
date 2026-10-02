@@ -236,16 +236,32 @@ namespace LightNShadows
                 return (noise * 0.6f + lowBoom * 0.4f) * env;
             });
 
-            // 5. Button Click: Crisp tactile cyber-arcade tick
-            clickClip = CreateClip("ButtonClick", 0.05f, sampleRate, (t, duration) =>
+            // 5. Button Click: Celestial Crystal Prism Chime (Snappy, ethereal holographic ping)
+            clickClip = CreateClip("ButtonClick", 0.11f, sampleRate, (t, duration) =>
             {
                 float progress = t / duration;
-                float env = Mathf.Exp(-progress * 35f);
-                float sweepFreq = Mathf.Lerp(1900f, 750f, progress);
-                float tone1 = Mathf.Sin(2f * Mathf.PI * sweepFreq * t);
-                float tone2 = Mathf.Sin(2f * Mathf.PI * 2600f * t) * 0.35f;
-                float clickTransient = (progress < 0.08f) ? (Random.value * 2f - 1f) * 0.4f : 0f;
-                return (tone1 * 0.65f + tone2 + clickTransient) * env;
+                // Fast anti-pop attack + exponential crystalline ringdown
+                float attack = Mathf.Clamp01(t / 0.003f);
+                float env = attack * Mathf.Exp(-progress * 22f);
+
+                // Transient: holographic crystal blip at start
+                float transient = 0f;
+                if (progress < 0.16f)
+                {
+                    float transProgress = progress / 0.16f;
+                    float sweep = Mathf.Lerp(3400f, 1320f, transProgress);
+                    transient = Mathf.Sin(2f * Mathf.PI * sweep * t) * (1f - transProgress) * 0.35f;
+                }
+
+                // Crystalline dual-realm harmonics: E6 (1318.5Hz fundamental) + B6 (1975.5Hz fifth) + E7 (2637Hz shimmer) + E5 (659.25Hz warm glow)
+                float shimmer = 1f + 0.15f * Mathf.Sin(2f * Mathf.PI * 32f * t);
+                float f1 = Mathf.Sin(2f * Mathf.PI * 1318.5f * t);
+                float f2 = Mathf.Sin(2f * Mathf.PI * 1975.5f * t) * 0.45f * shimmer;
+                float f3 = Mathf.Sin(2f * Mathf.PI * 2637.0f * t) * 0.20f;
+                float fWarm = Mathf.Sin(2f * Mathf.PI * 659.25f * t) * 0.30f;
+
+                float sample = (transient + (f1 * 0.55f + f2 + f3 + fWarm)) * env;
+                return Mathf.Clamp(sample * 0.85f, -1f, 1f);
             });
         }
 

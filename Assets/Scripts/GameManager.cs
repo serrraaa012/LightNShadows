@@ -45,8 +45,15 @@ namespace LightNShadows
         [SerializeField] private float scorePerSecond = 10f;
         private float scoreAccumulator = 0f;
 
-        private const string HighScoreKey = "LightNShadows_HighScore";
+        private const string LegacyHighScoreKey = "LightNShadows_HighScore";
         private const string PlayerNameKey = "LightNShadows_PlayerName";
+
+        public static string GetPlayerScoreKey(string name)
+        {
+            string clean = (name ?? "").Trim().ToUpperInvariant();
+            if (string.IsNullOrEmpty(clean)) clean = "RUNNER";
+            return $"LightNShadows_Score_{clean}";
+        }
 
         [Header("Player Identity")]
         public string PlayerName { get; private set; } = "";
@@ -64,8 +71,15 @@ namespace LightNShadows
                 return;
             }
 
-            HighScore = PlayerPrefs.GetInt(HighScoreKey, 0);
             PlayerName = PlayerPrefs.GetString(PlayerNameKey, "");
+            if (!string.IsNullOrWhiteSpace(PlayerName))
+            {
+                HighScore = PlayerPrefs.GetInt(GetPlayerScoreKey(PlayerName), 0);
+            }
+            else
+            {
+                HighScore = 0;
+            }
 
             if (startImmediately)
             {
@@ -107,6 +121,9 @@ namespace LightNShadows
 
             PlayerName = newName;
             PlayerPrefs.SetString(PlayerNameKey, PlayerName);
+
+            // Load this specific player's previous record (or 0 if they are a new player!)
+            HighScore = PlayerPrefs.GetInt(GetPlayerScoreKey(PlayerName), 0);
             PlayerPrefs.Save();
         }
 
@@ -115,6 +132,11 @@ namespace LightNShadows
             if (!HasPlayerName)
             {
                 SetPlayerName("RUNNER");
+            }
+            else
+            {
+                // Ensure HighScore is synced to this player's record
+                HighScore = PlayerPrefs.GetInt(GetPlayerScoreKey(PlayerName), 0);
             }
             Time.timeScale = 1f;
             currentState = GameState.Playing;
@@ -170,7 +192,9 @@ namespace LightNShadows
             {
                 HighScore = CurrentScore;
                 IsNewHighScore = true;
-                PlayerPrefs.SetInt(HighScoreKey, HighScore);
+                string pKey = GetPlayerScoreKey(PlayerName);
+                PlayerPrefs.SetInt(pKey, HighScore);
+                PlayerPrefs.SetInt(LegacyHighScoreKey, HighScore);
             }
         }
 
