@@ -616,14 +616,6 @@ namespace LightNShadows
                 ConfirmPlayerName();
             }
 
-            // Helper hint at the bottom
-            GUIStyle hintStyle = new GUIStyle(cardBodyStyle)
-            {
-                fontSize = 12,
-                alignment = TextAnchor.MiddleCenter
-            };
-            hintStyle.normal.textColor = new Color(0.5f, 0.6f, 0.75f);
-            GUI.Label(new Rect(modalRect.x, modalRect.y + cardH - 32, modalRect.width, 22), "Max 14 characters  •  Press [ ENTER ] to confirm", hintStyle);
         }
 
         // ==========================================
