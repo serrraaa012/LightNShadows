@@ -110,5 +110,10 @@ namespace LightNShadows
             }
             OnDimensionChanged?.Invoke(dimension);
         }
+
+        public void ResetToLight()
+        {
+            ApplyDimensionImmediate(DimensionType.Light);
+        }
     }
 }

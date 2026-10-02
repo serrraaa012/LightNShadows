@@ -28,6 +28,13 @@ namespace LightNShadows
         private static bool hasShownIntro = false;
         private static bool startImmediately = false;
 
+        private PlayerController player;
+
+        public void RegisterPlayer(PlayerController pc)
+        {
+            player = pc;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
@@ -80,6 +87,8 @@ namespace LightNShadows
             {
                 HighScore = 0;
             }
+
+            player = FindObjectOfType<PlayerController>(true);
 
             if (startImmediately)
             {
@@ -138,10 +147,8 @@ namespace LightNShadows
                 // Ensure HighScore is synced to this player's record
                 HighScore = PlayerPrefs.GetInt(GetPlayerScoreKey(PlayerName), 0);
             }
-            Time.timeScale = 1f;
-            currentState = GameState.Playing;
-            CurrentScore = 0;
-            IsNewHighScore = false;
+
+            ResetGameState(startGameplay: true);
         }
 
         public void PauseGame()
@@ -179,8 +186,7 @@ namespace LightNShadows
 
         public void OpenMainMenu()
         {
-            Time.timeScale = 1f;
-            currentState = GameState.Title;
+            ResetGameState(startGameplay: false);
         }
 
         public void AddScore(int amount)
@@ -222,9 +228,63 @@ namespace LightNShadows
 
         public void RestartGame()
         {
+            ResetGameState(startGameplay: true);
+        }
+
+        private void ResetGameState(bool startGameplay)
+        {
             Time.timeScale = 1f;
-            startImmediately = true;
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            CurrentScore = 0;
+            IsNewHighScore = false;
+            currentState = startGameplay ? GameState.Playing : GameState.Title;
+
+            // 1. Reset Obstacle Spawner & destroy all active hazards/orbs
+            ObstacleSpawner spawner = FindObjectOfType<ObstacleSpawner>();
+            if (spawner != null)
+            {
+                spawner.ResetSpawner();
+            }
+
+            // 2. Reset Dimension to Light
+            if (DimensionManager.Instance != null)
+            {
+                DimensionManager.Instance.ResetToLight();
+            }
+
+            // 3. Reset and Re-activate Player ball
+            if (player == null)
+            {
+                player = FindObjectOfType<PlayerController>(true);
+            }
+            if (player != null)
+            {
+                player.ResetPlayer();
+            }
+
+            // 4. Stop lingering camera shake
+            if (CameraShake.Instance != null)
+            {
+                CameraShake.Instance.StopShake();
+            }
+
+            // 5. Clean up any remaining shard explosions or shockwaves
+            ShardExplosion[] shards = FindObjectsOfType<ShardExplosion>();
+            for (int i = 0; i < shards.Length; i++)
+            {
+                if (shards[i] != null) Destroy(shards[i].gameObject);
+            }
+
+            ShockwavePulse[] waves = FindObjectsOfType<ShockwavePulse>();
+            for (int i = 0; i < waves.Length; i++)
+            {
+                if (waves[i] != null) Destroy(waves[i].gameObject);
+            }
+
+            // 6. Ensure music is playing
+            if (SoundManager.Instance != null)
+            {
+                SoundManager.Instance.ResumeMusic();
+            }
         }
     }
 }

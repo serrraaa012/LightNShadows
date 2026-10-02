@@ -37,6 +37,7 @@ namespace LightNShadows
         private string inputPlayerName = "";
         private bool focusNameFieldNext = false;
         private bool startGameOnConfirm = false;
+        private static bool hasPromptedNameOnOpen = false;
 
         // ==========================================
         // CELESTIAL PRISM & STARBURST CLICK EFFECTS
@@ -368,9 +369,11 @@ namespace LightNShadows
                 DrawFullScreenBackdrop(new Color(0.02f, 0.03f, 0.06f, 0.40f));
             }
 
-            // If player hasn't entered a name yet, prompt them on the start menu
-            if (GameManager.Instance != null && !GameManager.Instance.HasPlayerName && !showNameModal)
+            // Only ask for username when opening the game
+            if (!hasPromptedNameOnOpen && !showNameModal)
             {
+                hasPromptedNameOnOpen = true;
+                startGameOnConfirm = false;
                 OpenNameModal();
             }
 
@@ -454,9 +457,10 @@ namespace LightNShadows
 
             if (DrawStyledButton(new Rect(btnX, playBtnY, btnW, btnH), "PLAY", ButtonTheme.PrimaryCyan, interactive: !showNameModal))
             {
-                // Always ask for username every time the player clicks PLAY!
-                startGameOnConfirm = true;
-                OpenNameModal();
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.StartGame();
+                }
             }
 
             if (DrawStyledButton(new Rect(btnX, howToBtnY, btnW, btnH), "HOW TO PLAY", ButtonTheme.SecondaryIndigo, interactive: !showNameModal))
@@ -601,6 +605,10 @@ namespace LightNShadows
 
             if (DrawStyledButton(new Rect(leftBtnX, btnY, bW, btnH), "CANCEL", ButtonTheme.SecondaryIndigo))
             {
+                if (GameManager.Instance != null && !GameManager.Instance.HasPlayerName)
+                {
+                    GameManager.Instance.SetPlayerName("RUNNER");
+                }
                 showNameModal = false;
             }
 
@@ -616,7 +624,7 @@ namespace LightNShadows
                 alignment = TextAnchor.MiddleCenter
             };
             hintStyle.normal.textColor = new Color(0.5f, 0.6f, 0.75f);
-            GUI.Label(new Rect(modalRect.x, modalRect.y + cardH - 32, modalRect.width, 22), "Max 14 characters  •  Press [ ENTER ] to play", hintStyle);
+            GUI.Label(new Rect(modalRect.x, modalRect.y + cardH - 32, modalRect.width, 22), "Max 14 characters  •  Press [ ENTER ] to confirm", hintStyle);
         }
 
         // ==========================================
@@ -693,8 +701,10 @@ namespace LightNShadows
 
             if (DrawStyledButton(new Rect(midX - btnW - 14, bY, btnW, btnH), "PLAY", ButtonTheme.PrimaryCyan))
             {
-                startGameOnConfirm = true;
-                OpenNameModal();
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.StartGame();
+                }
             }
 
             if (DrawStyledButton(new Rect(midX + 14, bY, btnW, btnH), "BACK", ButtonTheme.SecondaryIndigo))

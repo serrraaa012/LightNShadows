@@ -23,15 +23,24 @@ namespace LightNShadows
         private bool isGrounded = true;
         private Vector3 baseScale;
         private Coroutine squashCoroutine;
+        private bool isAlive = true;
 
         private void Awake()
         {
             if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
             baseScale = transform.localScale;
+            if (baseScale == Vector3.zero) baseScale = new Vector3(0.85f, 0.85f, 1f);
 
             Vector3 pos = transform.position;
+            pos.x = -5f;
             pos.y = groundY;
+            pos.z = 0f;
             transform.position = pos;
+
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.RegisterPlayer(this);
+            }
 
             if (shockwaveSprite == null)
             {
@@ -54,6 +63,11 @@ namespace LightNShadows
 
         private void Start()
         {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.RegisterPlayer(this);
+            }
+
             if (DimensionManager.Instance != null)
             {
                 ApplyVisuals(DimensionManager.Instance.CurrentDimension);
@@ -62,7 +76,7 @@ namespace LightNShadows
 
         private void Update()
         {
-            if (GameManager.Instance != null && (!GameManager.Instance.IsPlaying || GameManager.Instance.IsGameOver))
+            if (!isAlive || GameManager.Instance == null || (!GameManager.Instance.IsPlaying || GameManager.Instance.IsGameOver))
             {
                 return;
             }
@@ -219,6 +233,9 @@ namespace LightNShadows
 
         public void Die()
         {
+            if (!isAlive) return;
+            isAlive = false;
+
             if (SoundManager.Instance != null) SoundManager.Instance.PlayDeath();
 
             Color deathColor = (spriteRenderer != null) ? spriteRenderer.color : Color.white;
@@ -241,6 +258,61 @@ namespace LightNShadows
             {
                 GameManager.Instance.TriggerGameOver();
             }
+        }
+
+        public void ResetPlayer()
+        {
+            gameObject.SetActive(true);
+            isAlive = true;
+
+            if (squashCoroutine != null)
+            {
+                StopCoroutine(squashCoroutine);
+                squashCoroutine = null;
+            }
+
+            if (baseScale == Vector3.zero)
+            {
+                baseScale = new Vector3(0.85f, 0.85f, 1f);
+            }
+            transform.localScale = baseScale;
+
+            Vector3 pos = transform.position;
+            pos.x = -5f;
+            pos.y = groundY;
+            pos.z = 0f;
+            transform.position = pos;
+
+            verticalVelocity = 0f;
+            isGrounded = true;
+
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.enabled = true;
+            }
+
+            Collider2D col = GetComponent<Collider2D>();
+            if (col != null)
+            {
+                col.enabled = true;
+            }
+
+            if (trailRenderer != null)
+            {
+                trailRenderer.enabled = true;
+                trailRenderer.Clear();
+            }
+
+            Transform halo = transform.Find("OrbitHalo");
+            if (halo != null)
+            {
+                halo.gameObject.SetActive(true);
+            }
+
+            DimensionType startDim = (DimensionManager.Instance != null)
+                ? DimensionManager.Instance.CurrentDimension
+                : DimensionType.Light;
+            ApplyVisuals(startDim);
         }
     }
 }

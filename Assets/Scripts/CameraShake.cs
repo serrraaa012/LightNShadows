@@ -46,5 +46,15 @@ namespace LightNShadows
             transform.localPosition = originalLocalPos;
             shakeCoroutine = null;
         }
+
+        public void StopShake()
+        {
+            if (shakeCoroutine != null)
+            {
+                StopCoroutine(shakeCoroutine);
+                shakeCoroutine = null;
+            }
+            transform.localPosition = originalLocalPos;
+        }
     }
 }

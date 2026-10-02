@@ -189,9 +189,30 @@ namespace LightNShadows
 
         public void ResetSpawner()
         {
+            StopAllCoroutines();
             gameTime = 0f;
             timer = 0f;
             isSpawningStarted = false;
+
+            // Clear all active obstacles
+            Obstacle[] obstacles = FindObjectsOfType<Obstacle>();
+            for (int i = 0; i < obstacles.Length; i++)
+            {
+                if (obstacles[i] != null)
+                {
+                    Destroy(obstacles[i].gameObject);
+                }
+            }
+
+            // Clear all active prism orbs
+            PrismOrb[] orbs = FindObjectsOfType<PrismOrb>();
+            for (int i = 0; i < orbs.Length; i++)
+            {
+                if (orbs[i] != null)
+                {
+                    Destroy(orbs[i].gameObject);
+                }
+            }
         }
     }
 }
