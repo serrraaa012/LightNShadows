@@ -8,7 +8,7 @@ namespace LightNShadows
     {
         [Header("Visuals")]
         [SerializeField] private SpriteRenderer spriteRenderer;
-        [SerializeField] private Color lightDimensionColor = new Color(0.08f, 0.08f, 0.12f);
+        [SerializeField] private Color lightDimensionColor = new Color(0.08f, 0.08f, 0.12f, 1f);
         [SerializeField] private Color shadowDimensionColor = new Color(1.3f, 1.35f, 1.5f, 1f);
         [SerializeField] private TrailRenderer trailRenderer;
         [SerializeField] private Sprite shockwaveSprite;
@@ -28,14 +28,40 @@ namespace LightNShadows
         private void Awake()
         {
             if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
-            baseScale = transform.localScale;
-            if (baseScale == Vector3.zero) baseScale = new Vector3(0.85f, 0.85f, 1f);
+
+            // Restore the classic player core ball sprite
+            Sprite coreSprite = Resources.Load<Sprite>("Sprites/PlayerCore");
+#if UNITY_EDITOR
+            if (coreSprite == null) coreSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/PlayerCore.png");
+#endif
+            if (coreSprite != null && spriteRenderer != null)
+            {
+                spriteRenderer.sprite = coreSprite;
+            }
+
+            baseScale = new Vector3(0.85f, 0.85f, 1f);
+            transform.localScale = baseScale;
 
             Vector3 pos = transform.position;
             pos.x = -5f;
             pos.y = groundY;
             pos.z = 0f;
             transform.position = pos;
+
+            // Restore ball circle collider
+            CircleCollider2D circle = GetComponent<CircleCollider2D>();
+            if (circle != null)
+            {
+                circle.offset = Vector2.zero;
+                circle.radius = 0.45f;
+            }
+
+            // Restore the energetic rotating orbit halo
+            Transform halo = transform.Find("OrbitHalo");
+            if (halo != null)
+            {
+                halo.gameObject.SetActive(true);
+            }
 
             if (GameManager.Instance != null)
             {
@@ -82,6 +108,9 @@ namespace LightNShadows
             }
 
             HandleJumpPhysics();
+
+            // Smooth ball spin roll while traversing
+            transform.Rotate(0f, 0f, -280f * Time.deltaTime);
         }
 
         private void HandleJumpPhysics()
@@ -180,7 +209,10 @@ namespace LightNShadows
 
             if (trailRenderer != null)
             {
-                trailRenderer.startColor = (dimension == DimensionType.Light) ? lightDimensionColor : shadowDimensionColor;
+                trailRenderer.startColor = (dimension == DimensionType.Light) 
+                    ? new Color(0.95f, 0.6f, 0.1f, 0.9f) 
+                    : new Color(0.2f, 0.95f, 1.5f, 0.9f);
+
                 Color endCol = trailRenderer.startColor;
                 endCol.a = 0f;
                 trailRenderer.endColor = endCol;
@@ -203,7 +235,7 @@ namespace LightNShadows
                 return;
             }
 
-            // 2. Realm Gates: Fatal if matching your realm, phase safely if opposite
+            // 2. Realm Hazards (Lasers, Hoops, Prisms): Fatal if matching your realm, phase safely if opposite
             if (obstacle.Dimension == currentDim)
             {
                 Die();
@@ -271,10 +303,9 @@ namespace LightNShadows
                 squashCoroutine = null;
             }
 
-            if (baseScale == Vector3.zero)
-            {
-                baseScale = new Vector3(0.85f, 0.85f, 1f);
-            }
+            transform.rotation = Quaternion.identity;
+
+            baseScale = new Vector3(0.85f, 0.85f, 1f);
             transform.localScale = baseScale;
 
             Vector3 pos = transform.position;
@@ -289,6 +320,11 @@ namespace LightNShadows
             if (spriteRenderer != null)
             {
                 spriteRenderer.enabled = true;
+                Sprite coreSprite = Resources.Load<Sprite>("Sprites/PlayerCore");
+#if UNITY_EDITOR
+                if (coreSprite == null) coreSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/PlayerCore.png");
+#endif
+                if (coreSprite != null) spriteRenderer.sprite = coreSprite;
             }
 
             Collider2D col = GetComponent<Collider2D>();

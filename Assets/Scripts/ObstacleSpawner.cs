@@ -18,13 +18,15 @@ namespace LightNShadows
         [SerializeField] private float spawnX = 12f;
         [SerializeField] private float groundY = -2.15f;
         [SerializeField] private float ceilingY = 1.95f;
-        [SerializeField] private float airborneY = 0.35f;
+        [SerializeField] private float hoopGroundY = -0.85f;
+        [SerializeField] private float hoopAirborneY = 0.45f;
+        [SerializeField] private float laserGateY = -0.55f;
 
         [Header("Difficulty & Speed Scaling")]
         [SerializeField] private float initialSpawnInterval = 2.2f;
-        [SerializeField] private float minSpawnInterval = 1.0f;
+        [SerializeField] private float minSpawnInterval = 0.95f;
         [SerializeField] private float initialSpeed = 6.8f;
-        [SerializeField] private float maxSpeed = 13.2f;
+        [SerializeField] private float maxSpeed = 13.5f;
         [SerializeField] private float difficultyRampTime = 60f;
 
         private float timer = 0f;
@@ -69,58 +71,71 @@ namespace LightNShadows
             float roll = Random.value;
 
             // Spawn occasional reward orbs between obstacles
-            if (Random.value < 0.38f && prismOrbPrefab != null)
+            if (Random.value < 0.35f && prismOrbPrefab != null)
             {
                 SpawnOrb(spawnX - 1.8f, (Random.value > 0.5f) ? -0.8f : 0.8f, speed);
             }
 
             if (progress < 0.25f)
             {
-                // Early game: Single ground spikes & tall gates
-                if (roll < 0.5f)
+                // Early game: Single ground spikes, neon laser gates, and floating neon hoops
+                if (roll < 0.35f)
                 {
                     SpawnObstacle(crystalSpikePrefab, spawnX, groundY, DimensionType.Neutral, speed, ObstacleVisualType.CrystalSpike);
                 }
+                else if (roll < 0.70f)
+                {
+                    SpawnObstacle(laserGatePrefab, spawnX, laserGateY, RandomRealm(), speed, ObstacleVisualType.LaserGate);
+                }
                 else
                 {
-                    SpawnObstacle(laserGatePrefab, spawnX, -0.65f, RandomRealm(), speed, ObstacleVisualType.LaserGate);
+                    // Floating Neon Phase Hoop
+                    SpawnNeonHoop(spawnX, hoopGroundY, RandomRealm(), speed);
                 }
             }
             else if (progress < 0.65f)
             {
-                // Mid game: Introduce Ceiling Spires, Floating Drones, and Combos
-                if (roll < 0.3f)
+                // Mid game: Neon Laser Gates, Neon Hoops, Ceiling Spires, and Combos
+                if (roll < 0.22f)
                 {
                     SpawnObstacle(crystalSpikePrefab, spawnX, groundY, DimensionType.Neutral, speed, ObstacleVisualType.CrystalSpike);
                 }
-                else if (roll < 0.55f)
+                else if (roll < 0.44f)
                 {
-                    SpawnObstacle(laserGatePrefab, spawnX, -0.65f, RandomRealm(), speed, ObstacleVisualType.LaserGate);
+                    SpawnObstacle(laserGatePrefab, spawnX, laserGateY, RandomRealm(), speed, ObstacleVisualType.LaserGate);
                 }
-                else if (roll < 0.75f)
+                else if (roll < 0.62f)
                 {
-                    // Ceiling hazard!
+                    // Airborne Neon Phase Hoop (jump to ring or phase through)
+                    SpawnNeonHoop(spawnX, hoopAirborneY, RandomRealm(), speed);
+                }
+                else if (roll < 0.78f)
+                {
                     SpawnObstacle(ceilingSpirePrefab, spawnX, ceilingY, DimensionType.Neutral, speed, ObstacleVisualType.CeilingSpire);
                 }
                 else
                 {
-                    StartCoroutine(SpawnJumpThenPhaseCombo(speed));
+                    StartCoroutine(SpawnSpikeThenHoopCombo(speed));
                 }
             }
             else
             {
-                // Intense late game: Squeezes, rhythm gauntlets
-                if (roll < 0.3f)
+                // Intense late game: Neon Laser gauntlets, rapid phase hoops, squeezes
+                if (roll < 0.25f)
                 {
                     StartCoroutine(SpawnCeilingFloorSqueeze(speed));
                 }
-                else if (roll < 0.65f)
+                else if (roll < 0.50f)
                 {
-                    StartCoroutine(SpawnDoubleGateRoutine(speed));
+                    StartCoroutine(SpawnDoubleLaserGateRoutine(speed));
+                }
+                else if (roll < 0.75f)
+                {
+                    StartCoroutine(SpawnLaserThenHoopWave(speed));
                 }
                 else
                 {
-                    StartCoroutine(SpawnTripleGauntlet(speed));
+                    StartCoroutine(SpawnTripleNeonGauntlet(speed));
                 }
             }
         }
@@ -137,6 +152,21 @@ namespace LightNShadows
             }
         }
 
+        private void SpawnNeonHoop(float x, float y, DimensionType dim, float speed)
+        {
+            // Instantiate using laserGatePrefab as robust base template
+            GameObject basePrefab = (laserGatePrefab != null) ? laserGatePrefab : crystalSpikePrefab;
+            if (basePrefab == null) return;
+
+            GameObject obj = Instantiate(basePrefab, new Vector3(x, y, 0f), Quaternion.identity);
+            obj.name = "NeonHoop";
+            Obstacle obs = obj.GetComponent<Obstacle>();
+            if (obs != null)
+            {
+                obs.Setup(dim, speed, ObstacleVisualType.NeonHoop);
+            }
+        }
+
         private void SpawnOrb(float x, float y, float speed)
         {
             if (prismOrbPrefab == null) return;
@@ -145,15 +175,15 @@ namespace LightNShadows
             if (po != null) po.Setup(speed);
         }
 
-        // Combo 1: Red Spike -> Realm Gate
-        private IEnumerator SpawnJumpThenPhaseCombo(float speed)
+        // Combo 1: Jump Spike -> Floating Neon Hoop
+        private IEnumerator SpawnSpikeThenHoopCombo(float speed)
         {
             SpawnObstacle(crystalSpikePrefab, spawnX, groundY, DimensionType.Neutral, speed, ObstacleVisualType.CrystalSpike);
-            yield return new WaitForSeconds(0.62f);
-            SpawnObstacle(laserGatePrefab, spawnX, -0.65f, RandomRealm(), speed, ObstacleVisualType.LaserGate);
+            yield return new WaitForSeconds(0.60f);
+            SpawnNeonHoop(spawnX, hoopGroundY, RandomRealm(), speed);
         }
 
-        // Combo 2: Floor Spike + Ceiling Spire (Squeeze challenge!)
+        // Combo 2: Floor Spike + Ceiling Spire (Precision squeeze!)
         private IEnumerator SpawnCeilingFloorSqueeze(float speed)
         {
             SpawnObstacle(crystalSpikePrefab, spawnX, groundY, DimensionType.Neutral, speed, ObstacleVisualType.CrystalSpike);
@@ -161,25 +191,36 @@ namespace LightNShadows
             SpawnObstacle(ceilingSpirePrefab, spawnX, ceilingY, DimensionType.Neutral, speed, ObstacleVisualType.CeilingSpire);
         }
 
-        // Combo 3: Double Realm Gate
-        private IEnumerator SpawnDoubleGateRoutine(float speed)
+        // Combo 3: Double Neon Laser Gate (Rapid realm flip)
+        private IEnumerator SpawnDoubleLaserGateRoutine(float speed)
         {
             DimensionType first = RandomRealm();
             DimensionType second = (first == DimensionType.Light) ? DimensionType.Shadow : DimensionType.Light;
 
-            SpawnObstacle(laserGatePrefab, spawnX, -0.65f, first, speed, ObstacleVisualType.LaserGate);
-            yield return new WaitForSeconds(0.6f);
-            SpawnObstacle(laserGatePrefab, spawnX, -0.65f, second, speed, ObstacleVisualType.LaserGate);
+            SpawnObstacle(laserGatePrefab, spawnX, laserGateY, first, speed, ObstacleVisualType.LaserGate);
+            yield return new WaitForSeconds(0.62f);
+            SpawnObstacle(laserGatePrefab, spawnX, laserGateY, second, speed, ObstacleVisualType.LaserGate);
         }
 
-        // Combo 4: Triple Gauntlet (Spike -> Gate -> Airborne Drone)
-        private IEnumerator SpawnTripleGauntlet(float speed)
+        // Combo 4: Neon Laser Gate -> Floating Neon Hoop
+        private IEnumerator SpawnLaserThenHoopWave(float speed)
+        {
+            DimensionType first = RandomRealm();
+            DimensionType second = (first == DimensionType.Light) ? DimensionType.Shadow : DimensionType.Light;
+
+            SpawnObstacle(laserGatePrefab, spawnX, laserGateY, first, speed, ObstacleVisualType.LaserGate);
+            yield return new WaitForSeconds(0.55f);
+            SpawnNeonHoop(spawnX, hoopAirborneY, second, speed);
+        }
+
+        // Combo 5: Triple Neon Gauntlet (Ground Spike -> Laser Gate -> Floating Neon Drone)
+        private IEnumerator SpawnTripleNeonGauntlet(float speed)
         {
             SpawnObstacle(crystalSpikePrefab, spawnX, groundY, DimensionType.Neutral, speed, ObstacleVisualType.CrystalSpike);
             yield return new WaitForSeconds(0.52f);
-            SpawnObstacle(laserGatePrefab, spawnX, -0.65f, RandomRealm(), speed, ObstacleVisualType.LaserGate);
+            SpawnObstacle(laserGatePrefab, spawnX, laserGateY, RandomRealm(), speed, ObstacleVisualType.LaserGate);
             yield return new WaitForSeconds(0.52f);
-            SpawnObstacle(floatingDiamondPrefab, spawnX, airborneY, RandomRealm(), speed, ObstacleVisualType.FloatingDiamond);
+            SpawnObstacle(floatingDiamondPrefab, spawnX, 0.35f, RandomRealm(), speed, ObstacleVisualType.FloatingDiamond);
         }
 
         private DimensionType RandomRealm()
@@ -203,6 +244,7 @@ namespace LightNShadows
                     Destroy(obstacles[i].gameObject);
                 }
             }
+            Obstacle.ActiveObstacles.Clear();
 
             // Clear all active prism orbs
             PrismOrb[] orbs = FindObjectsOfType<PrismOrb>();

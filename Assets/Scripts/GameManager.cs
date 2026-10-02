@@ -29,6 +29,7 @@ namespace LightNShadows
         private static bool startImmediately = false;
 
         private PlayerController player;
+        public PlayerController Player => player;
 
         public void RegisterPlayer(PlayerController pc)
         {
