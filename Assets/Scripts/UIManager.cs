@@ -480,8 +480,6 @@ namespace LightNShadows
 
         private void ConfirmPlayerName()
         {
-            if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
-
             string cleanName = inputPlayerName?.Trim();
             if (string.IsNullOrWhiteSpace(cleanName))
             {
@@ -589,6 +587,7 @@ namespace LightNShadows
             // Keyboard Enter handler
             if (Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter))
             {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 ConfirmPlayerName();
                 Event.current.Use();
             }

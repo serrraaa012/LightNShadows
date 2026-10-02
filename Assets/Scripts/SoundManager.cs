@@ -14,6 +14,9 @@ namespace LightNShadows
         [SerializeField] private AudioClip backgroundMusic;
         [Range(0f, 1f)] [SerializeField] private float musicVolume = 0.5f;
 
+        [Header("Custom Sound Effects")]
+        [SerializeField] private AudioClip customButtonClick;
+
         private AudioSource audioSource; // Compatibility alias
         private AudioClip swapClip;
         private AudioClip jumpClip;
@@ -36,6 +39,7 @@ namespace LightNShadows
 
             InitAudioSources();
             GenerateProceduralAudioClips();
+            InitButtonClick();
             InitMusic();
         }
 
@@ -57,48 +61,121 @@ namespace LightNShadows
             }
         }
 
-        private void InitMusic()
+        private void InitButtonClick()
         {
-            if (backgroundMusic == null)
+            if (customButtonClick != null)
             {
-                backgroundMusic = Resources.Load<AudioClip>("Audio/Music_LightNShadows");
+                clickClip = customButtonClick;
+                return;
             }
 
+            AudioClip loaded = Resources.Load<AudioClip>("Audio/ButtonClick");
 #if UNITY_EDITOR
-            if (backgroundMusic == null)
+            if (loaded == null)
             {
-                backgroundMusic = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Music_LightNShadows.wav");
+                loaded = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/ButtonClick.mp3");
             }
 #endif
+            if (loaded != null)
+            {
+                clickClip = loaded;
+                Debug.Log("<color=green>[SoundManager]</color> Custom button click audio clip loaded!");
+                return;
+            }
+
+            StartCoroutine(LoadButtonClickFallback());
+        }
+
+        private System.Collections.IEnumerator LoadButtonClickFallback()
+        {
+            string[] clickPaths = new string[]
+            {
+                System.IO.Path.Combine(Application.dataPath, "Audio/ButtonClick.mp3"),
+                System.IO.Path.Combine(Application.dataPath, "Resources/Audio/ButtonClick.mp3"),
+                @"C:\Users\sarah\.gemini\antigravity\brain\dd098baa-b450-4d87-950b-5edbdecc7adb\.user_uploaded\uploaded_media_0_1790928409215.mp3"
+            };
+
+            foreach (string p in clickPaths)
+            {
+                if (System.IO.File.Exists(p))
+                {
+                    using (var uwr = UnityEngine.Networking.UnityWebRequestMultimedia.GetAudioClip("file://" + p, AudioType.MPEG))
+                    {
+                        yield return uwr.SendWebRequest();
+                        if (uwr.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+                        {
+                            AudioClip clip = UnityEngine.Networking.DownloadHandlerAudioClip.GetContent(uwr);
+                            if (clip != null)
+                            {
+                                clickClip = clip;
+                                Debug.Log("<color=green>[SoundManager]</color> Successfully loaded custom button click from file!");
+                                yield break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void InitMusic()
+        {
+            AudioClip customMusic = Resources.Load<AudioClip>("Audio/BackgroundMusic");
+
+#if UNITY_EDITOR
+            if (customMusic == null)
+            {
+                customMusic = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/BackgroundMusic.mp3");
+            }
+#endif
+
+            if (customMusic != null)
+            {
+                backgroundMusic = customMusic;
+                StartMusic(backgroundMusic);
+                return;
+            }
 
             if (backgroundMusic != null)
             {
                 StartMusic(backgroundMusic);
+                return;
             }
-            else
-            {
-                StartCoroutine(LoadMusicFallback());
-            }
+
+            StartCoroutine(LoadMusicFallback());
         }
 
         private System.Collections.IEnumerator LoadMusicFallback()
         {
-            string audioPath = System.IO.Path.Combine(Application.dataPath, "Audio/Music_LightNShadows.wav");
-            if (!System.IO.File.Exists(audioPath))
+            string[] musicPaths = new string[]
             {
-                audioPath = System.IO.Path.Combine(Application.dataPath, "Resources/Audio/Music_LightNShadows.wav");
-            }
-            if (!System.IO.File.Exists(audioPath)) yield break;
+                System.IO.Path.Combine(Application.dataPath, "Audio/BackgroundMusic.mp3"),
+                System.IO.Path.Combine(Application.dataPath, "Resources/Audio/BackgroundMusic.mp3"),
+                @"C:\Users\sarah\.gemini\antigravity\brain\dd098baa-b450-4d87-950b-5edbdecc7adb\.user_uploaded\uploaded_media_1_1790928409215.mp3",
+                System.IO.Path.Combine(Application.dataPath, "Audio/Music_LightNShadows.wav"),
+                System.IO.Path.Combine(Application.dataPath, "Resources/Audio/Music_LightNShadows.wav")
+            };
 
-            using (var uwr = UnityEngine.Networking.UnityWebRequestMultimedia.GetAudioClip("file://" + audioPath, AudioType.WAV))
+            foreach (string p in musicPaths)
             {
-                yield return uwr.SendWebRequest();
-                if (uwr.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+                if (System.IO.File.Exists(p))
                 {
-                    backgroundMusic = UnityEngine.Networking.DownloadHandlerAudioClip.GetContent(uwr);
-                    if (backgroundMusic != null)
+                    AudioType aType = p.EndsWith(".mp3", System.StringComparison.OrdinalIgnoreCase) 
+                        ? AudioType.MPEG 
+                        : AudioType.WAV;
+
+                    using (var uwr = UnityEngine.Networking.UnityWebRequestMultimedia.GetAudioClip("file://" + p, aType))
                     {
-                        StartMusic(backgroundMusic);
+                        yield return uwr.SendWebRequest();
+                        if (uwr.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+                        {
+                            AudioClip clip = UnityEngine.Networking.DownloadHandlerAudioClip.GetContent(uwr);
+                            if (clip != null)
+                            {
+                                backgroundMusic = clip;
+                                StartMusic(backgroundMusic);
+                                yield break;
+                            }
+                        }
                     }
                 }
             }
@@ -189,8 +266,8 @@ namespace LightNShadows
         {
             if (sfxSource != null && clickClip != null)
             {
-                sfxSource.pitch = Random.Range(0.97f, 1.03f);
-                sfxSource.PlayOneShot(clickClip, 0.75f);
+                sfxSource.pitch = 1.0f;
+                sfxSource.PlayOneShot(clickClip, 0.90f);
             }
         }
 
