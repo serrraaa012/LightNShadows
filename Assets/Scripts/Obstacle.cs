@@ -8,14 +8,13 @@ namespace LightNShadows
         CrystalSpike,
         CeilingSpire,
         LaserGate,
-        FloatingDiamond,
-        NeonHoop
+        FloatingDiamond
     }
 
     [RequireComponent(typeof(SpriteRenderer), typeof(Collider2D))]
     public class Obstacle : MonoBehaviour
     {
-        // Global registry of all active onscreen obstacles for radar lookahead & zero-alloc queries
+        // Global registry of all active onscreen obstacles
         public static readonly List<Obstacle> ActiveObstacles = new List<Obstacle>();
 
         [Header("Dimension State")]
@@ -30,10 +29,10 @@ namespace LightNShadows
         [SerializeField] private float baseSpeed = 7f;
         [SerializeField] private float offscreenX = -14f;
 
-        [Header("Electric Neon Colors")]
+        [Header("Stylized Colors")]
         [SerializeField] private Color neutralCrimsonColor = new Color(1.8f, 0.2f, 0.35f, 1f);
-        [SerializeField] private Color lightSolarColor = new Color(1.5f, 0.9f, 0.2f, 1f); 
-        [SerializeField] private Color shadowVoidColor = new Color(0.2f, 1.1f, 1.6f, 1f); 
+        [SerializeField] private Color lightSolarColor = new Color(1.4f, 0.85f, 0.2f, 1f); 
+        [SerializeField] private Color shadowVoidColor = new Color(0.2f, 0.95f, 1.5f, 1f); 
         [Range(0.05f, 0.5f)]
         [SerializeField] private float ghostAlpha = 0.25f;
 
@@ -89,69 +88,6 @@ namespace LightNShadows
             currentSpeed = speed;
             visualType = vType;
 
-            if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
-
-            BoxCollider2D box = GetComponent<BoxCollider2D>();
-
-            // Setup high-tech neon obstacle visuals & colliders
-            if (visualType == ObstacleVisualType.NeonHoop)
-            {
-                Sprite hoopSprite = SpriteHelper.GetNeonHoopSprite();
-                if (hoopSprite != null && spriteRenderer != null)
-                {
-                    spriteRenderer.sprite = hoopSprite;
-                }
-                transform.localScale = new Vector3(1.1f, 1.1f, 1f);
-
-                if (box != null)
-                {
-                    box.size = new Vector2(0.85f, 1.6f);
-                    box.offset = Vector2.zero;
-                }
-            }
-            else if (visualType == ObstacleVisualType.LaserGate)
-            {
-                Sprite laserSprite = SpriteHelper.GetLaserGateSprite();
-                if (laserSprite != null && spriteRenderer != null)
-                {
-                    spriteRenderer.sprite = laserSprite;
-                }
-                transform.localScale = new Vector3(0.95f, 1.25f, 1f);
-
-                if (box != null)
-                {
-                    box.size = new Vector2(0.75f, 3.4f);
-                    box.offset = Vector2.zero;
-                }
-            }
-            else if (visualType == ObstacleVisualType.FloatingDiamond)
-            {
-                transform.localScale = new Vector3(0.95f, 0.95f, 1f);
-                if (box != null)
-                {
-                    box.size = new Vector2(1.1f, 1.1f);
-                    box.offset = Vector2.zero;
-                }
-            }
-            else if (visualType == ObstacleVisualType.CrystalSpike)
-            {
-                transform.localScale = new Vector3(0.9f, 0.9f, 1f);
-                if (box != null)
-                {
-                    box.size = new Vector2(0.95f, 1.3f);
-                    box.offset = new Vector2(0f, 0f);
-                }
-            }
-            else if (visualType == ObstacleVisualType.CeilingSpire)
-            {
-                transform.localScale = new Vector3(0.9f, 0.9f, 1f);
-                if (box != null)
-                {
-                    box.size = new Vector2(0.95f, 1.4f);
-                    box.offset = new Vector2(0f, 0f);
-                }
-            }
-
             if (DimensionManager.Instance != null)
             {
                 UpdateVisualState(DimensionManager.Instance.CurrentDimension);
@@ -168,26 +104,16 @@ namespace LightNShadows
             transform.Translate(Vector3.left * currentSpeed * Time.deltaTime, Space.World);
             animTimer += Time.deltaTime;
 
-            // 1. Neon Laser Gate Energy Pulse
-            if (visualType == ObstacleVisualType.LaserGate)
+            // 1. Floating Diamond Bobbing & Spin
+            if (visualType == ObstacleVisualType.FloatingDiamond)
             {
-                float pulseX = 0.92f + Mathf.PingPong(animTimer * 6.5f, 0.16f);
-                transform.localScale = new Vector3(pulseX, 1.25f, 1f);
+                transform.position = new Vector3(transform.position.x, initialPosition.y + Mathf.Sin(animTimer * 3.8f) * 0.18f, 0f);
             }
-            // 2. Neon Phase Hoop Hover & Energetic Respiration
-            else if (visualType == ObstacleVisualType.NeonHoop)
+            // 2. Tall Laser Gate Horizontal Energy Pulse (preserving full 3.8f vertical height)
+            else if (visualType == ObstacleVisualType.LaserGate)
             {
-                float hoverY = initialPosition.y + Mathf.Sin(animTimer * 3.8f) * 0.16f;
-                float hoopPulse = 1.05f + Mathf.Sin(animTimer * 5.2f) * 0.08f;
-                transform.position = new Vector3(transform.position.x, hoverY, 0f);
-                transform.localScale = new Vector3(hoopPulse, hoopPulse, 1f);
-            }
-            // 3. Floating Neon Prism Diamond Drone Bobbing & Spinning
-            else if (visualType == ObstacleVisualType.FloatingDiamond)
-            {
-                float floatY = initialPosition.y + Mathf.Sin(animTimer * 3.6f) * 0.24f;
-                transform.position = new Vector3(transform.position.x, floatY, 0f);
-                transform.rotation = Quaternion.Euler(0f, 0f, animTimer * 48f);
+                float pulseX = 0.9f + Mathf.PingPong(animTimer * 3.5f, 0.22f);
+                transform.localScale = new Vector3(pulseX, 3.8f, 1f);
             }
 
             // Award score when player successfully clears / passes the obstacle
@@ -240,8 +166,6 @@ namespace LightNShadows
 
             Color baseColor = (dimension == DimensionType.Light) ? lightSolarColor : shadowVoidColor;
 
-            // In matching realm: solid vibrant neon barrier!
-            // In opposite realm: glowing translucent holographic phase portal!
             if (activeDimension == dimension)
             {
                 baseColor.a = 1.0f;
@@ -256,7 +180,7 @@ namespace LightNShadows
 
         public void OnPlayerPhasedThrough()
         {
-            hasScored = true; // Mark as scored so passing behind player doesn't double-award
+            hasScored = true;
 
             if (spriteRenderer != null && dimension != DimensionType.Neutral)
             {

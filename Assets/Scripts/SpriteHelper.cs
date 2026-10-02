@@ -8,15 +8,7 @@ namespace LightNShadows
     {
         private const string BrainDir = @"C:\Users\sarah\.gemini\antigravity\brain\dd098baa-b450-4d87-950b-5edbdecc7adb";
 
-        private static Sprite cachedHoopSprite;
         private static Sprite cachedLaserSprite;
-
-        public static Sprite GetNeonHoopSprite()
-        {
-            if (cachedHoopSprite != null) return cachedHoopSprite;
-            cachedHoopSprite = LoadOrProcessSprite("NeonHoop.png", "neon_phase_hoop_1790925015674.jpg", 360f);
-            return cachedHoopSprite;
-        }
 
         public static Sprite GetLaserGateSprite()
         {

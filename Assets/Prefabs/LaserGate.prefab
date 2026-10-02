@@ -152,6 +152,6 @@ MonoBehaviour:
   baseSpeed: 7
   offscreenX: -14
   neutralCrimsonColor: {r: 1.8, g: 0.2, b: 0.35, a: 1}
-  lightSolarColor: {r: 1.5, g: 0.9, b: 0.2, a: 1}
-  shadowVoidColor: {r: 0.2, g: 1.1, b: 1.6, a: 1}
+  lightSolarColor: {r: 1.4, g: 0.85, b: 0.2, a: 1}
+  shadowVoidColor: {r: 0.2, g: 0.95, b: 1.5, a: 1}
   ghostAlpha: 0.25
