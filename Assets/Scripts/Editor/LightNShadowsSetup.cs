@@ -49,6 +49,14 @@ namespace LightNShadows.Editor
             Debug.Log("<color=green>[LightNShadows]</color> Best score successfully reset to 0!");
         }
 
+        [MenuItem("Tools/LightNShadows/Reset Player Name")]
+        public static void ResetPlayerName()
+        {
+            PlayerPrefs.DeleteKey("LightNShadows_PlayerName");
+            PlayerPrefs.Save();
+            Debug.Log("<color=cyan>[LightNShadows]</color> Player name successfully cleared! Start menu will prompt on launch.");
+        }
+
         [MenuItem("Tools/LightNShadows/Auto-Setup Scene")]
         public static void SetupScene()
         {

@@ -46,6 +46,11 @@ namespace LightNShadows
         private float scoreAccumulator = 0f;
 
         private const string HighScoreKey = "LightNShadows_HighScore";
+        private const string PlayerNameKey = "LightNShadows_PlayerName";
+
+        [Header("Player Identity")]
+        public string PlayerName { get; private set; } = "";
+        public bool HasPlayerName => !string.IsNullOrWhiteSpace(PlayerName);
 
         private void Awake()
         {
@@ -60,6 +65,7 @@ namespace LightNShadows
             }
 
             HighScore = PlayerPrefs.GetInt(HighScoreKey, 0);
+            PlayerName = PlayerPrefs.GetString(PlayerNameKey, "");
 
             if (startImmediately)
             {
@@ -87,8 +93,29 @@ namespace LightNShadows
             // Score increases strictly when passing obstacles or collecting items
         }
 
+        public void SetPlayerName(string newName)
+        {
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                newName = "RUNNER";
+            }
+            newName = newName.Trim();
+            if (newName.Length > 14)
+            {
+                newName = newName.Substring(0, 14);
+            }
+
+            PlayerName = newName;
+            PlayerPrefs.SetString(PlayerNameKey, PlayerName);
+            PlayerPrefs.Save();
+        }
+
         public void StartGame()
         {
+            if (!HasPlayerName)
+            {
+                SetPlayerName("RUNNER");
+            }
             Time.timeScale = 1f;
             currentState = GameState.Playing;
             CurrentScore = 0;

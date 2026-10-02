@@ -29,6 +29,12 @@ namespace LightNShadows
         private GUIStyle cardBodyStyle;
         private GUIStyle buttonStyle;
         private GUIStyle hudStyle;
+        private GUIStyle inputFieldStyle;
+
+        // Username Dialog State
+        private bool showNameModal = false;
+        private string inputPlayerName = "";
+        private bool focusNameFieldNext = false;
 
         private bool stylesInitialized = false;
 
@@ -160,12 +166,23 @@ namespace LightNShadows
                 alignment = TextAnchor.UpperLeft
             };
 
+            inputFieldStyle = new GUIStyle(GUI.skin.textField)
+            {
+                font = displayFont,
+                fontSize = 20,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+            inputFieldStyle.normal.textColor = Color.white;
+            inputFieldStyle.focused.textColor = new Color(1.3f, 0.9f, 0.3f);
+
             stylesInitialized = true;
         }
 
         private void Update()
         {
             if (GameManager.Instance == null) return;
+            if (showNameModal) return;
 
             // Toggle pause with Escape or P key
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P))
@@ -203,6 +220,12 @@ namespace LightNShadows
                 case GameManager.GameState.GameOver:
                     DrawGameOverMenu();
                     break;
+            }
+
+            // Draw username modal dialog on top if active
+            if (showNameModal)
+            {
+                DrawNameModal();
             }
         }
 
@@ -289,13 +312,19 @@ namespace LightNShadows
                 DrawFullScreenBackdrop(new Color(0.02f, 0.03f, 0.06f, 0.40f));
             }
 
+            // If player hasn't entered a name yet, prompt them on the start menu
+            if (GameManager.Instance != null && !GameManager.Instance.HasPlayerName && !showNameModal)
+            {
+                OpenNameModal();
+            }
+
             float midX = Screen.width * 0.5f;
 
             // 2. High Score Ribbon Badge
             int best = (GameManager.Instance != null) ? GameManager.Instance.HighScore : 0;
             float badgeW = 280f;
-            float badgeH = 36f;
-            float badgeY = Screen.height * 0.58f;
+            float badgeH = 34f;
+            float badgeY = Screen.height * 0.53f;
             Rect badgeRect = new Rect(midX - badgeW * 0.5f, badgeY, badgeW, badgeH);
 
             GUI.color = new Color(0.04f, 0.06f, 0.12f, 0.90f);
@@ -307,31 +336,234 @@ namespace LightNShadows
             GUIStyle badgeStyle = new GUIStyle(cardBodyStyle)
             {
                 font = displayFont,
-                fontSize = 15,
+                fontSize = 14,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
             badgeStyle.normal.textColor = new Color(1.3f, 0.88f, 0.25f);
             GUI.Label(badgeRect, $"★  RECORD: {best:N0} PTS  ★", badgeStyle);
 
-            // 3. Action Buttons (Clean, responsive pill buttons)
-            float btnW = Mathf.Clamp(Screen.width * 0.26f, 260f, 320f);
-            float btnH = 54f;
-            float btnX = midX - btnW * 0.5f;
-            float playBtnY = badgeY + 48f;
-            float howToBtnY = playBtnY + 64f;
+            // 3. Runner Profile Tag (Clickable to Edit Name)
+            float tagY = badgeY + 40f;
+            float tagH = 38f;
+            Rect tagRect = new Rect(midX - badgeW * 0.5f, tagY, badgeW, tagH);
 
-            if (GUI.Button(new Rect(btnX, playBtnY, btnW, btnH), "PLAY", buttonStyle))
+            bool isTagHover = tagRect.Contains(Event.current.mousePosition) && !showNameModal;
+            GUI.color = isTagHover ? new Color(0.12f, 0.16f, 0.26f, 0.95f) : new Color(0.04f, 0.06f, 0.12f, 0.90f);
+            GUI.DrawTexture(tagRect, Texture2D.whiteTexture);
+            GUI.color = isTagHover ? new Color(0.3f, 0.95f, 1.4f) : new Color(0.2f, 0.65f, 0.95f, 0.7f);
+            DrawBorder(tagRect, 1.5f);
+            GUI.color = Color.white;
+
+            string runnerTag = (GameManager.Instance != null && GameManager.Instance.HasPlayerName)
+                ? GameManager.Instance.PlayerName
+                : "SET NAME";
+
+            GUIStyle tagTextStyle = new GUIStyle(cardBodyStyle)
+            {
+                font = displayFont,
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+            tagTextStyle.normal.textColor = isTagHover ? Color.white : new Color(0.85f, 0.92f, 1f);
+            GUI.Label(tagRect, $"👤 RUNNER: {runnerTag}  ✎", tagTextStyle);
+
+            if (GUI.Button(tagRect, GUIContent.none, GUIStyle.none) && !showNameModal)
             {
                 if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
-                GameManager.Instance.StartGame();
+                OpenNameModal();
             }
 
-            if (GUI.Button(new Rect(btnX, howToBtnY, btnW, btnH), "HOW TO PLAY", buttonStyle))
+            // 4. Action Buttons (Clean, responsive pill buttons)
+            float btnW = Mathf.Clamp(Screen.width * 0.26f, 260f, 320f);
+            float btnH = 52f;
+            float btnX = midX - btnW * 0.5f;
+            float playBtnY = tagY + 48f;
+            float howToBtnY = playBtnY + 60f;
+
+            if (GUI.Button(new Rect(btnX, playBtnY, btnW, btnH), "PLAY", buttonStyle) && !showNameModal)
+            {
+                if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
+                if (GameManager.Instance != null && !GameManager.Instance.HasPlayerName)
+                {
+                    OpenNameModal();
+                }
+                else
+                {
+                    GameManager.Instance.StartGame();
+                }
+            }
+
+            if (GUI.Button(new Rect(btnX, howToBtnY, btnW, btnH), "HOW TO PLAY", buttonStyle) && !showNameModal)
             {
                 if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
                 GameManager.Instance.OpenInstructions();
             }
+        }
+
+        private void OpenNameModal()
+        {
+            showNameModal = true;
+            inputPlayerName = (GameManager.Instance != null && GameManager.Instance.HasPlayerName) 
+                ? GameManager.Instance.PlayerName 
+                : "";
+            focusNameFieldNext = true;
+        }
+
+        private void ConfirmPlayerName()
+        {
+            if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
+
+            string cleanName = inputPlayerName?.Trim();
+            if (string.IsNullOrWhiteSpace(cleanName))
+            {
+                cleanName = "RUNNER";
+            }
+            if (cleanName.Length > 14)
+            {
+                cleanName = cleanName.Substring(0, 14);
+            }
+
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.SetPlayerName(cleanName);
+            }
+
+            showNameModal = false;
+        }
+
+        // ==========================================
+        // 1.5. USERNAME PROMPT MODAL
+        // ==========================================
+        private void DrawNameModal()
+        {
+            Rect screenRect = new Rect(0, 0, Screen.width, Screen.height);
+
+            // Dark semi-transparent scrim backdrop
+            GUI.color = new Color(0.02f, 0.03f, 0.06f, 0.85f);
+            GUI.DrawTexture(screenRect, Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            float midX = Screen.width * 0.5f;
+            float midY = Screen.height * 0.5f;
+
+            float cardW = Mathf.Min(480f, Screen.width * 0.92f);
+            float cardH = 310f;
+            Rect modalRect = new Rect(midX - cardW * 0.5f, midY - cardH * 0.5f, cardW, cardH);
+
+            DrawGlassPanel(modalRect);
+
+            // 1. Header: "ENTER YOUR NAME" (Neon Cyan glow with drop shadow)
+            GUIStyle modalHeader = new GUIStyle(headerStyle) { fontSize = 30 };
+            modalHeader.normal.textColor = new Color(0.02f, 0.04f, 0.08f, 0.9f);
+            GUI.Label(new Rect(modalRect.x + 2, modalRect.y + 26, modalRect.width, 36), "ENTER YOUR NAME", modalHeader);
+
+            modalHeader.normal.textColor = new Color(0.2f, 0.95f, 1.4f);
+            GUI.Label(new Rect(modalRect.x, modalRect.y + 24, modalRect.width, 36), "ENTER YOUR NAME", modalHeader);
+
+            // 2. Subtitle / Instruction Line
+            GUIStyle subStyle = new GUIStyle(cardBodyStyle)
+            {
+                font = displayFont,
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter
+            };
+            subStyle.normal.textColor = new Color(0.75f, 0.85f, 0.98f);
+            GUI.Label(new Rect(modalRect.x, modalRect.y + 64, modalRect.width, 22), "Choose your runner callsign for the leaderboard", subStyle);
+
+            // 3. Stylized Input Box Container
+            float inputW = cardW - 70f;
+            float inputH = 50f;
+            Rect inputRect = new Rect(midX - inputW * 0.5f, modalRect.y + 104f, inputW, inputH);
+
+            GUI.color = new Color(0.05f, 0.07f, 0.12f, 0.95f);
+            GUI.DrawTexture(inputRect, Texture2D.whiteTexture);
+            GUI.color = new Color(0.3f, 0.85f, 1.2f, 0.9f); // Cyan neon border
+            DrawBorder(inputRect, 2f);
+            GUI.color = Color.white;
+
+            // User icon on the left
+            GUIStyle iconStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 20,
+                alignment = TextAnchor.MiddleCenter
+            };
+            iconStyle.normal.textColor = new Color(0.3f, 0.95f, 1.4f);
+            GUI.Label(new Rect(inputRect.x + 8, inputRect.y, 36, inputH), "👤", iconStyle);
+
+            // Text Field
+            Rect fieldRect = new Rect(inputRect.x + 46, inputRect.y + 4, inputW - 56, inputH - 8);
+            GUI.SetNextControlName("PlayerNameInputField");
+            inputPlayerName = GUI.TextField(fieldRect, inputPlayerName, 14, inputFieldStyle);
+
+            if (focusNameFieldNext)
+            {
+                GUI.FocusControl("PlayerNameInputField");
+                focusNameFieldNext = false;
+            }
+
+            // Placeholder hint if field is empty
+            if (string.IsNullOrEmpty(inputPlayerName) && GUI.GetNameOfFocusedControl() != "PlayerNameInputField")
+            {
+                GUIStyle phStyle = new GUIStyle(inputFieldStyle)
+                {
+                    fontSize = 16,
+                    fontStyle = FontStyle.Italic
+                };
+                phStyle.normal.textColor = new Color(0.45f, 0.55f, 0.7f, 0.7f);
+                GUI.Label(fieldRect, "Type your name...", phStyle);
+            }
+
+            // Keyboard Enter handler
+            if (Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter))
+            {
+                ConfirmPlayerName();
+                Event.current.Use();
+            }
+
+            // 4. Action Buttons
+            bool hasExistingName = GameManager.Instance != null && GameManager.Instance.HasPlayerName;
+            float btnH = 46f;
+            float btnY = modalRect.y + 180f;
+
+            if (hasExistingName)
+            {
+                // Two buttons: CONFIRM (right) and CANCEL (left)
+                float bW = 160f;
+                float gap = 16f;
+                float leftBtnX = midX - bW - gap * 0.5f;
+                float rightBtnX = midX + gap * 0.5f;
+
+                if (GUI.Button(new Rect(leftBtnX, btnY, bW, btnH), "CANCEL", buttonStyle))
+                {
+                    if (SoundManager.Instance != null) SoundManager.Instance.PlayButtonClick();
+                    showNameModal = false;
+                }
+
+                if (GUI.Button(new Rect(rightBtnX, btnY, bW, btnH), "CONFIRM", buttonStyle))
+                {
+                    ConfirmPlayerName();
+                }
+            }
+            else
+            {
+                // Single prominent CONFIRM button
+                float bW = 220f;
+                if (GUI.Button(new Rect(midX - bW * 0.5f, btnY, bW, btnH), "CONFIRM", buttonStyle))
+                {
+                    ConfirmPlayerName();
+                }
+            }
+
+            // Helper hint at the bottom
+            GUIStyle hintStyle = new GUIStyle(cardBodyStyle)
+            {
+                fontSize = 12,
+                alignment = TextAnchor.MiddleCenter
+            };
+            hintStyle.normal.textColor = new Color(0.5f, 0.6f, 0.75f);
+            GUI.Label(new Rect(modalRect.x, modalRect.y + cardH - 32, modalRect.width, 22), "Max 14 characters  •  Press [ ENTER ] to confirm", hintStyle);
         }
 
         // ==========================================
@@ -524,7 +756,15 @@ namespace LightNShadows
             subHud.normal.textColor = new Color(1f, 0.88f, 0.35f, 0.95f);
             GUI.Label(new Rect(scoreX, scoreY + 34, 300, 26), $"BEST:  {GameManager.Instance.HighScore:N0}", subHud);
 
-            // 3. CORNER PAUSE BUTTON (Top-Right)
+            // 3. RUNNER CALLSIGN
+            string pName = (GameManager.Instance != null && GameManager.Instance.HasPlayerName) ? GameManager.Instance.PlayerName : "RUNNER";
+            GUIStyle runnerStyle = new GUIStyle(hudStyle) { fontSize = 13 };
+            runnerStyle.normal.textColor = new Color(0.02f, 0.03f, 0.06f, 0.95f);
+            GUI.Label(new Rect(scoreX + 2, scoreY + 60, 300, 22), $"RUNNER: {pName}", runnerStyle);
+            runnerStyle.normal.textColor = new Color(0.3f, 0.95f, 1.4f, 0.95f);
+            GUI.Label(new Rect(scoreX, scoreY + 59, 300, 22), $"RUNNER: {pName}", runnerStyle);
+
+            // 4. CORNER PAUSE BUTTON (Top-Right)
             float pauseSize = 44f;
             Rect pauseRect = new Rect(Screen.width - pauseSize - 22f, 20f, pauseSize, pauseSize);
 
@@ -608,8 +848,8 @@ namespace LightNShadows
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
-            scoreSummaryStyle.normal.textColor = Color.white;
-            GUI.Label(boxRect, $"SCORE: {GameManager.Instance.CurrentScore:N0}    |    BEST: {GameManager.Instance.HighScore:N0}", scoreSummaryStyle);
+            string pauseRunner = (GameManager.Instance != null && GameManager.Instance.HasPlayerName) ? GameManager.Instance.PlayerName : "RUNNER";
+            GUI.Label(boxRect, $"{pauseRunner}   |   SCORE: {GameManager.Instance.CurrentScore:N0}   |   BEST: {GameManager.Instance.HighScore:N0}", scoreSummaryStyle);
 
             // 3. Action Buttons
             float btnW = 260f;
@@ -662,6 +902,8 @@ namespace LightNShadows
             overTitle.normal.textColor = new Color(1.5f, 0.2f, 0.32f); // Luminous Crimson
             GUI.Label(new Rect(panelRect.x, panelRect.y + 32, panelRect.width, 55), "GAME OVER", overTitle);
 
+            string overRunner = (GameManager.Instance != null && GameManager.Instance.HasPlayerName) ? GameManager.Instance.PlayerName : "RUNNER";
+
             // 2. High Score Celebration or Divider
             if (GameManager.Instance.IsNewHighScore)
             {
@@ -672,7 +914,7 @@ namespace LightNShadows
                     alignment = TextAnchor.MiddleCenter
                 };
                 recordStyle.normal.textColor = new Color(1.3f, 0.88f, 0.25f); // Solar Gold
-                GUI.Label(new Rect(panelRect.x, panelRect.y + 92, panelRect.width, 28), "★ NEW RECORD! ★", recordStyle);
+                GUI.Label(new Rect(panelRect.x, panelRect.y + 92, panelRect.width, 28), $"★ NEW RECORD BY {overRunner.ToUpper()}! ★", recordStyle);
             }
             else
             {
@@ -706,7 +948,7 @@ namespace LightNShadows
                 alignment = TextAnchor.MiddleCenter
             };
             statLine.normal.textColor = new Color(0.7f, 0.8f, 0.95f);
-            GUI.Label(new Rect(boxRect.x, boxRect.y + 60, boxRect.width, 28), $"BEST: {GameManager.Instance.HighScore:N0} PTS", statLine);
+            GUI.Label(new Rect(boxRect.x, boxRect.y + 60, boxRect.width, 28), $"RUNNER: {overRunner}   |   BEST: {GameManager.Instance.HighScore:N0} PTS", statLine);
 
             // 4. Action Buttons
             float btnW = 280f;
